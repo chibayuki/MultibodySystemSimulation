@@ -22,76 +22,49 @@ namespace Multibody
         private double _Mass;
         private Com.PointD3D _Location;
         private Com.PointD3D _Velocity;
-        private Com.PointD3D _Acceleration;
+        private Com.PointD3D _Force;
 
-        public Particle(double mass, Com.PointD3D location, Com.PointD3D velocity)
+        private Particle(double mass, Com.PointD3D location, Com.PointD3D velocity, Com.PointD3D force)
         {
             _Mass = mass;
             _Location = location;
             _Velocity = velocity;
-            _Acceleration = Com.PointD3D.Zero;
+            _Force = force;
         }
 
-        public double Mass
+        public Particle(double mass, Com.PointD3D location, Com.PointD3D velocity) : this(mass, location, velocity, Com.PointD3D.Zero)
         {
-            get
-            {
-                return _Mass;
-            }
-            set
-            {
-                _Mass = value;
-            }
         }
 
-        public Com.PointD3D Location
+        public double Mass => _Mass;
+
+        public Com.PointD3D Location => _Location;
+
+        public Com.PointD3D Velocity => _Velocity;
+
+        public Com.PointD3D Acceleration => _Force / _Mass;
+
+        public Particle Copy()
         {
-            get
-            {
-                return _Location;
-            }
+            return new Particle(_Mass, _Location, _Velocity, _Force);
         }
 
-        public Com.PointD3D Velocity
+        public void NextMoment(double second)
         {
-            get
-            {
-                return _Velocity;
-            }
-        }
+            Com.PointD3D acceleration = Acceleration;
 
-        public Com.PointD3D Acceleration
-        {
-            get
-            {
-                return _Acceleration;
-            }
+            _Location += (_Velocity + acceleration * (second / 2)) * second;
+            _Velocity += acceleration * second;
         }
 
         public void AddForce(Com.PointD3D force)
         {
-            _Acceleration += force / _Mass;
+            _Force += force;
         }
 
         public void RemoveForce()
         {
-            _Acceleration = Com.PointD3D.Zero;
-        }
-
-        public void Move(double second)
-        {
-            _Location += (_Velocity + _Acceleration * (second / 2)) * second;
-            _Velocity += _Acceleration * second;
-        }
-
-        public Particle Copy()
-        {
-            Particle particle = new Particle(_Mass, _Location, _Velocity)
-            {
-                _Acceleration = Com.PointD3D.Zero
-            };
-
-            return particle;
+            _Force = Com.PointD3D.Zero;
         }
     }
 }

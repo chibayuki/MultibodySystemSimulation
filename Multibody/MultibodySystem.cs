@@ -19,123 +19,50 @@ namespace Multibody
 {
     internal class MultibodySystem
     {
-        private const double GravitationalConstant = 6.67259E-11;
-
-        private class Frame
-        {
-            public double _Time;
-            public List<Particle> _Particles;
-
-            public Frame(double time, params Particle[] particles)
-            {
-                _Time = time;
-                _Particles = new List<Particle>(0);
-
-                foreach (Particle particle in particles)
-                {
-                    _Particles.Add(particle.Copy());
-                }
-            }
-
-            public Frame(double time, List<Particle> particles)
-            {
-                _Time = time;
-                _Particles = new List<Particle>(0);
-
-                foreach (Particle particle in particles)
-                {
-                    _Particles.Add(particle.Copy());
-                }
-            }
-
-            public double Time
-            {
-                get
-                {
-                    return _Time;
-                }
-
-                set
-                {
-                    _Time = value;
-                }
-            }
-
-            public List<Particle> Particles
-            {
-                get
-                {
-                    return _Particles;
-                }
-
-                set
-                {
-                    _Particles = value;
-                }
-            }
-        }
-
-        private List<Frame> _Frames;
+        private Frame _FirstFrame;
+        private List<Frame> _FrameHistory;
 
         public MultibodySystem(params Particle[] particles)
         {
+            _FrameHistory = new List<Frame>();
+
             Reset(particles);
         }
 
         public MultibodySystem(List<Particle> particles)
         {
+            _FrameHistory = new List<Frame>();
+
             Reset(particles);
-        }
-
-        public void Reset(params Particle[] particles)
-        {
-            _Frames = new List<Frame>();
-            _Frames.Add(new Frame(0, particles));
-        }
-
-        public void Reset(List<Particle> particles)
-        {
-            _Frames = new List<Frame>();
-            _Frames.Add(new Frame(0, particles));
-        }
-
-        public void BackToBeginning()
-        {
-            Frame frame = _Frames[0];
-
-            _Frames.Clear();
-            _Frames.Add(frame);
         }
 
         public void NextFrame(double second)
         {
-            Frame frame = _Frames[_Frames.Count - 1];
-            Frame newFrame = new Frame(frame.Time + second, frame.Particles);
+            Frame frame = _FrameHistory[_FrameHistory.Count - 1].Copy();
 
-            List<Particle> particles = newFrame.Particles;
+            frame.NextMoment(second);
 
-            for (int i = 0; i < particles.Count; i++)
-            {
-                for (int j = i + 1; j < particles.Count; j++)
-                {
-                    Com.PointD3D distance = particles[j].Location - particles[i].Location;
-                    Com.PointD3D force = (GravitationalConstant * particles[j].Mass / distance.ModuleSquared) * distance.Normalize;
+            _FrameHistory.Add(frame);
+        }
 
-                    particles[i].AddForce(force);
-                }
-            }
+        public void Restart()
+        {
+            _FrameHistory.Clear();
+            _FrameHistory.Add(_FirstFrame.Copy());
+        }
 
-            foreach (Particle particle in particles)
-            {
-                particle.Move(second);
-            }
+        public void Reset(params Particle[] particles)
+        {
+            _FirstFrame = new Frame(0, particles);
 
-            foreach (Particle particle in particles)
-            {
-                particle.RemoveForce();
-            }
+            Restart();
+        }
 
-            _Frames.Add(newFrame);
+        public void Reset(List<Particle> particles)
+        {
+            _FirstFrame = new Frame(0, particles);
+
+            Restart();
         }
     }
 }
