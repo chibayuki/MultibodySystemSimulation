@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
+    // 粒子，表示三维空间中的质点
     internal class Particle
     {
         private double _Mass;
@@ -36,19 +37,25 @@ namespace Multibody
         {
         }
 
+        // 获取此 Particle 对象的质量
         public double Mass => _Mass;
 
+        // 获取此 Particle 对象的位置
         public Com.PointD3D Location => _Location;
 
+        // 获取此 Particle 对象的速度
         public Com.PointD3D Velocity => _Velocity;
 
+        // 获取此 Particle 对象的加速度
         public Com.PointD3D Acceleration => _Force / _Mass;
 
+        // 返回此 Particle 对象的副本
         public Particle Copy()
         {
             return new Particle(_Mass, _Location, _Velocity, _Force);
         }
 
+        // 将此 Particle 对象运动指定的秒数
         public void NextMoment(double second)
         {
             Com.PointD3D acceleration = Acceleration;
@@ -57,11 +64,22 @@ namespace Multibody
             _Velocity += acceleration * second;
         }
 
+        // 在此 Particle 对象上施加一个作用力
         public void AddForce(Com.PointD3D force)
         {
             _Force += force;
         }
 
+        // 在此 Particle 对象上施加若干个作用力
+        public void AddForce(params Com.PointD3D[] forces)
+        {
+            foreach (Com.PointD3D force in forces)
+            {
+                _Force += force;
+            }
+        }
+
+        // 移除在此 Particle 对象上施加的所有作用力
         public void RemoveForce()
         {
             _Force = Com.PointD3D.Zero;

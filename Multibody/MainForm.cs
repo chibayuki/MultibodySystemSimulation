@@ -19,6 +19,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using System.Drawing.Drawing2D;
+
 namespace Multibody
 {
     public partial class MainForm : Form
@@ -65,7 +67,125 @@ namespace Multibody
 
         private void FormDefine()
         {
+            Me.Caption = Application.ProductName;
+            Me.Theme = Com.WinForm.Theme.Black;
 
+            Me.Location = new Point(0, 0);
+            Me.Size = new Size(1500, 1000);
+
+            Me.Loading += Me_Loading;
+            Me.Loaded += Me_Loaded;
+        }
+
+        private void Me_Loading(object sender, EventArgs e)
+        {
+            List<Particle> particles = new List<Particle>();
+
+            for (int i = 0; i < 3; i++)
+            {
+                particles.Add(new Particle(
+                    Com.Statistics.RandomDouble(1E6, 1E7),
+                    new Com.PointD3D(Com.Statistics.RandomInteger(500, 1000), Com.Statistics.RandomInteger(300, 700), 0),
+                    new Com.PointD3D(Com.Statistics.RandomDouble(-0.001, 0.001), Com.Statistics.RandomDouble(-0.001, 0.001), 0)
+                    ));
+            }
+
+            _MultibodySystem = new MultibodySystem(particles);
+        }
+
+        private void Me_Loaded(object sender, EventArgs e)
+        {
+            Timer_Graph.Enabled = true;
+        }
+
+        MultibodySystem _MultibodySystem = null;
+
+        Bitmap _MultibodyBitmap = null;
+
+        private void _UpdateMultibodyBitmap()
+        {
+            if (_MultibodyBitmap != null)
+            {
+                _MultibodyBitmap.Dispose();
+            }
+
+            _MultibodyBitmap = new Bitmap(Math.Max(1, Panel_Main.Width), Math.Max(1, Panel_Main.Height));
+
+            using (Graphics Grap = Graphics.FromImage(_MultibodyBitmap))
+            {
+                Grap.SmoothingMode = SmoothingMode.AntiAlias;
+                Grap.Clear(Color.Black);
+
+                RectangleF bitmapBounds = new RectangleF(new PointF(), _MultibodyBitmap.Size);
+
+                List<Particle> particles = _MultibodySystem.LastFrame.Particles;
+
+                for (int i = 0; i < particles.Count; i++)
+                {
+                    Com.PointD location = Transport(particles[i].Location);
+                    Com.ColorX color = Com.ColorX.FromHSL((31 * i) % 360, 100, 70);
+
+                    if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                    {
+                        using (Brush Br = new SolidBrush(color.ToColor()))
+                        {
+                            Grap.FillEllipse(Br, new RectangleF((float)location.X - 2.5F, (float)location.Y - 2.5F, 5, 5));
+                        }
+                    }
+
+                    int _N = _MultibodySystem.FrameCount - 1, _M = Math.Max(1, _MultibodySystem.FrameCount - 1000000);
+                    int _K = 1000;
+
+                    for (int j = _N; j >= _M; j -= _K)
+                    {
+                        Com.PointD pt1 = Transport(_MultibodySystem.Frame(j).Particles[i].Location);
+                        Com.PointD pt2 = Transport(_MultibodySystem.Frame(j - _K).Particles[i].Location);
+
+                        if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
+                        {
+                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, color.AtOpacity(100 * (j - _M) / (_N - _M)).ToColor(), 1, true);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void _RepaintMultibodyBitmap()
+        {
+            _UpdateMultibodyBitmap();
+
+            if (_MultibodyBitmap != null)
+            {
+                Panel_Main.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, 0));
+            }
+        }
+
+        private void Panel_Main_Paint(object sender, PaintEventArgs e)
+        {
+            if (_MultibodyBitmap == null)
+            {
+                _UpdateMultibodyBitmap();
+            }
+
+            if (_MultibodyBitmap != null)
+            {
+                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, 0));
+            }
+        }
+
+        private void Timer_Graph_Tick(object sender, EventArgs e)
+        {
+            for (int i = 0; i < 10000; i++)
+            {
+                _MultibodySystem.NextFrame(1);
+            }
+
+            _RepaintMultibodyBitmap();
+        }
+
+        private Com.PointD Transport(Com.PointD3D pt)
+        {
+            return pt.XY;
         }
     }
 }

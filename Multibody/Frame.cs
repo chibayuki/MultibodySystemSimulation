@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
+    // 帧，表示若干粒子的瞬时状态
     internal class Frame
     {
         private const double GravitationalConstant = 6.67259E-11;
@@ -46,15 +47,19 @@ namespace Multibody
             }
         }
 
+        // 获取此 Frame 对象的相对时刻（秒）
         public double Time => _Time;
 
+        // 获取此 Frame 对象的所有粒子
         public List<Particle> Particles => _Particles;
 
+        // 获取此 Frame 对象的副本
         public Frame Copy()
         {
             return new Frame(_Time, _Particles);
         }
 
+        // 将此 Frame 对象运动指定的秒数
         public void NextMoment(double second)
         {
             _Time += second;
@@ -64,10 +69,15 @@ namespace Multibody
                 for (int j = i + 1; j < _Particles.Count; j++)
                 {
                     Com.PointD3D distance = _Particles[j].Location - _Particles[i].Location;
-                    Com.PointD3D acceleration = (GravitationalConstant / distance.ModuleSquared) * distance.Normalize;
+                    double distMod = distance.ModuleSquared;
 
-                    _Particles[i].AddForce(_Particles[j].Mass * acceleration);
-                    _Particles[j].AddForce(_Particles[i].Mass * acceleration.Opposite);
+                    if (distMod >= 1)
+                    {
+                        Com.PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distMod) * distance.Normalize;
+
+                        _Particles[i].AddForce(force);
+                        _Particles[j].AddForce(force.Opposite);
+                    }
                 }
             }
 
