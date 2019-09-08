@@ -20,69 +20,147 @@ namespace Multibody
     // 多体系统
     internal class MultibodySystem
     {
+        private int _Capacity;
+        private int _Count;
         private Frame _FirstFrame;
-        private List<Frame> _FrameHistory;
+        private List<Frame> _FrameHistory_Part1;
+        private List<Frame> _FrameHistory_Part2;
 
-        public MultibodySystem(params Particle[] particles)
+        public MultibodySystem(int capacity, params Particle[] particles)
         {
-            _FrameHistory = new List<Frame>();
-
-            Reset(particles);
+            Reset(capacity, particles);
         }
 
-        public MultibodySystem(List<Particle> particles)
+        public MultibodySystem(int capacity, List<Particle> particles)
         {
-            _FrameHistory = new List<Frame>();
-
-            Reset(particles);
+            Reset(capacity, particles);
         }
 
         // 获取此 MultibodySystem 对象的第一帧
         public Frame FirstFrame => _FirstFrame;
 
         // 获取此 MultibodySystem 对象的最后一帧
-        public Frame LastFrame => _FrameHistory[_FrameHistory.Count - 1];
+        public Frame LastFrame => Frame(_Count - 1);
+
+        // 获取此 MultibodySystem 对象的帧容量
+        public int FrameCapacity => _Capacity;
 
         // 获取此 MultibodySystem 对象的总帧数
-        public int FrameCount => _FrameHistory.Count;
+        public int FrameCount => _Count;
 
         // 获取此 MultibodySystem 对象的指定帧
         public Frame Frame(int index)
         {
-            return _FrameHistory[index];
+            if (index < 0 || index >= _Count)
+            {
+                throw new ArgumentException();
+            }
+
+            //
+
+            if (_FrameHistory_Part1.Count < _Capacity)
+            {
+                return _FrameHistory_Part1[index];
+            }
+            else
+            {
+                int _index = _FrameHistory_Part1.Count + _FrameHistory_Part2.Count - _Capacity + index;
+
+                if (_index < _Capacity)
+                {
+                    return _FrameHistory_Part1[_index];
+                }
+                else
+                {
+                    return _FrameHistory_Part2[_index - _Capacity];
+                }
+            }
         }
 
         // 将此 MultibodySystem 对象运动指定的秒数
-        public void NextFrame(double second)
+        public void NextMoment(double second)
         {
+            if (double.IsNaN(second) || double.IsInfinity(second) || second <= 0)
+            {
+                throw new ArgumentException();
+            }
+
+            //
+
             Frame frame = LastFrame.Copy();
 
             frame.NextMoment(second);
 
-            _FrameHistory.Add(frame);
+            if (_FrameHistory_Part1.Count < _Capacity)
+            {
+                _FrameHistory_Part1.Add(frame);
+                _Count++;
+            }
+            else if (_FrameHistory_Part2.Count < _Capacity)
+            {
+                _FrameHistory_Part2.Add(frame);
+            }
+            else
+            {
+                _FrameHistory_Part1 = _FrameHistory_Part2;
+                _FrameHistory_Part2 = new List<Frame>(_Capacity);
+                _FrameHistory_Part2.Add(frame);
+            }
         }
 
         // 将此 MultibodySystem 对象回到第一帧
         public void Restart()
         {
-            _FrameHistory.Clear();
-            _FrameHistory.Add(_FirstFrame.Copy());
+            _FrameHistory_Part1.Clear();
+            _FrameHistory_Part2.Clear();
+            _FrameHistory_Part1.Add(_FirstFrame.Copy());
+            _Count = 1;
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
-        public void Reset(params Particle[] particles)
+        public void Reset(int capacity, params Particle[] particles)
         {
-            _FirstFrame = new Frame(0, particles);
+            if (capacity <= 0)
+            {
+                throw new ArgumentException();
+            }
 
-            Restart();
+            if (particles == null || particles.Length <= 0)
+            {
+                throw new ArgumentNullException();
+            }
+
+            //
+
+            _Capacity = capacity;
+            _FirstFrame = new Frame(0, particles);
+            _FrameHistory_Part1 = new List<Frame>(_Capacity);
+            _FrameHistory_Part2 = new List<Frame>(_Capacity);
+            _FrameHistory_Part1.Add(_FirstFrame.Copy());
+            _Count = 1;
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
-        public void Reset(List<Particle> particles)
+        public void Reset(int capacity, List<Particle> particles)
         {
-            _FirstFrame = new Frame(0, particles);
+            if (capacity <= 0)
+            {
+                throw new ArgumentException();
+            }
 
-            Restart();
+            if (particles == null || particles.Count <= 0)
+            {
+                throw new ArgumentNullException();
+            }
+
+            //
+
+            _Capacity = capacity;
+            _FirstFrame = new Frame(0, particles);
+            _FrameHistory_Part1 = new List<Frame>(_Capacity);
+            _FrameHistory_Part2 = new List<Frame>(_Capacity);
+            _FrameHistory_Part1.Add(_FirstFrame.Copy());
+            _Count = 1;
         }
     }
 }

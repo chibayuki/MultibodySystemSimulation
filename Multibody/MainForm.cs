@@ -81,16 +81,20 @@ namespace Multibody
         {
             List<Particle> particles = new List<Particle>();
 
-            for (int i = 0; i < 3; i++)
+            /*for (int i = 0; i < 3; i++)
             {
                 particles.Add(new Particle(
                     Com.Statistics.RandomDouble(1E6, 1E7),
                     new Com.PointD3D(Com.Statistics.RandomInteger(500, 1000), Com.Statistics.RandomInteger(300, 700), 0),
                     new Com.PointD3D(Com.Statistics.RandomDouble(-0.001, 0.001), Com.Statistics.RandomDouble(-0.001, 0.001), 0)
                     ));
-            }
+            }*/
 
-            _MultibodySystem = new MultibodySystem(particles);
+            particles.Add(new Particle(1E7, new Com.PointD3D(700, 500, 0), new Com.PointD3D(0, 0.0012, 0)));
+            particles.Add(new Particle(5E6, new Com.PointD3D(800, 500, 0), new Com.PointD3D(0, -0.0021, 0)));
+            particles.Add(new Particle(1E6, new Com.PointD3D(400, 500, 0), new Com.PointD3D(0, -0.0014, 0)));
+
+            _MultibodySystem = new MultibodySystem(1000000, particles);
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -120,9 +124,11 @@ namespace Multibody
 
                 List<Particle> particles = _MultibodySystem.LastFrame.Particles;
 
+                int FrameCount = _MultibodySystem.FrameCount;
+
                 for (int i = 0; i < particles.Count; i++)
                 {
-                    Com.PointD location = Transport(particles[i].Location);
+                    Com.PointD location = CoordinateTransform(particles[i].Location);
                     Com.ColorX color = Com.ColorX.FromHSL((31 * i) % 360, 100, 70);
 
                     if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
@@ -133,17 +139,14 @@ namespace Multibody
                         }
                     }
 
-                    int _N = _MultibodySystem.FrameCount - 1, _M = Math.Max(1, _MultibodySystem.FrameCount - 1000000);
-                    int _K = 1000;
-
-                    for (int j = _N; j >= _M; j -= _K)
+                    for (int j = FrameCount - 1; j >= 1000; j -= 1000)
                     {
-                        Com.PointD pt1 = Transport(_MultibodySystem.Frame(j).Particles[i].Location);
-                        Com.PointD pt2 = Transport(_MultibodySystem.Frame(j - _K).Particles[i].Location);
+                        Com.PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
+                        Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1000).Particles[i].Location);
 
                         if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                         {
-                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, color.AtOpacity(100 * (j - _M) / (_N - _M)).ToColor(), 1, true);
+                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, color.AtOpacity(100 * j / FrameCount).ToColor(), 1, true);
                         }
                     }
                 }
@@ -175,15 +178,15 @@ namespace Multibody
 
         private void Timer_Graph_Tick(object sender, EventArgs e)
         {
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 20000; i++)
             {
-                _MultibodySystem.NextFrame(1);
+                _MultibodySystem.NextMoment(1);
             }
 
             _RepaintMultibodyBitmap();
         }
 
-        private Com.PointD Transport(Com.PointD3D pt)
+        private Com.PointD CoordinateTransform(Com.PointD3D pt)
         {
             return pt.XY;
         }
