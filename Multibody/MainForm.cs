@@ -79,14 +79,16 @@ namespace Multibody
 
         private void Me_Loading(object sender, EventArgs e)
         {
-            List<Particle> particles = new List<Particle>();
-
-            particles.Add(new Particle(1E7, new Com.PointD3D(700, 500, 0), new Com.PointD3D(0, 0.0012, 0)));
-            particles.Add(new Particle(5E6, new Com.PointD3D(780, 500, 0), new Com.PointD3D(0, -0.0021, 0)));
-            particles.Add(new Particle(1E6, new Com.PointD3D(440, 500, 0), new Com.PointD3D(0, -0.0016, 0)));
-            particles.Add(new Particle(5E4, new Com.PointD3D(420, 500, 0), new Com.PointD3D(0, -0.0029, 0)));
-            particles.Add(new Particle(2E5, new Com.PointD3D(1150, 500, 0), new Com.PointD3D(0, 0.0017, 0)));
-            particles.Add(new Particle(1E4, new Com.PointD3D(1170, 500, 0), new Com.PointD3D(0, 0.0024, 0)));
+            List<Particle> particles = new List<Particle>
+            {
+                new Particle(1E7, 3, new Com.PointD3D(700, 500, 2000), new Com.PointD3D(0, 0.0012, 0)),
+                new Particle(5E6, 3, new Com.PointD3D(780, 500, 2000), new Com.PointD3D(0, -0.0021, 0)),
+                new Particle(1E6, 2, new Com.PointD3D(440, 500, 2000), new Com.PointD3D(0, -0.0016, 0)),
+                new Particle(5E4, 2, new Com.PointD3D(420, 500, 2000), new Com.PointD3D(0, -0.0029, 0)),
+                new Particle(2E5, 1, new Com.PointD3D(1150, 500, 2000), new Com.PointD3D(0, 0.0017, 0)),
+                new Particle(1E4, 1, new Com.PointD3D(1170, 500, 2000), new Com.PointD3D(0, 0.0024, 0)),
+                new Particle(2E4, 1, new Com.PointD3D(320, 500, 2000), new Com.PointD3D(0, 0.0017, 0))
+            };
 
             _MultibodySystem = new MultibodySystem(1000000, particles);
         }
@@ -182,7 +184,7 @@ namespace Multibody
 
         private Com.PointD CoordinateTransform(Com.PointD3D pt)
         {
-            return pt.XY;
+            return pt.ProjectToXY(new Com.PointD3D(750, 500, 0), 1000);
         }
     }
 }

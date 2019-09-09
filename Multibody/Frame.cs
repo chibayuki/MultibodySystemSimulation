@@ -21,7 +21,6 @@ namespace Multibody
     internal sealed class Frame
     {
         private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）
-        private const double MinimizeDistanceSquared = 1.0; // 计算万有引力的最小距离（米）
 
         public double _Time;
         public List<Particle> _Particles;
@@ -106,11 +105,21 @@ namespace Multibody
                 for (int j = i + 1; j < _Particles.Count; j++)
                 {
                     Com.PointD3D distance = _Particles[j].Location - _Particles[i].Location;
-                    double distanceSquared = distance.ModuleSquared;
 
-                    if (distanceSquared >= MinimizeDistanceSquared)
+                    double distanceModule = distance.Module;
+
+                    if (distanceModule > 0)
                     {
-                        Com.PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distanceSquared) * distance.Normalize;
+                        double radiusSum = _Particles[i].Radius + _Particles[j].Radius;
+                        double dist = Math.Max(distanceModule, radiusSum);
+                        double distSquared = dist * dist;
+
+                        Com.PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distSquared) * distance.Normalize;
+
+                        if (distanceModule < radiusSum)
+                        {
+                            force *= distanceModule / radiusSum;
+                        }
 
                         _Particles[i].AddForce(force);
                         _Particles[j].AddForce(force.Opposite);

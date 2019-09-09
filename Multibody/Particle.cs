@@ -21,13 +21,14 @@ namespace Multibody
     internal sealed class Particle
     {
         private double _Mass;
+        private double _Radius;
         private Com.PointD3D _Location;
         private Com.PointD3D _Velocity;
         private Com.PointD3D _Force;
 
-        private Particle(double mass, Com.PointD3D location, Com.PointD3D velocity, Com.PointD3D force)
+        private Particle(double mass, double radius, Com.PointD3D location, Com.PointD3D velocity, Com.PointD3D force)
         {
-            if ((double.IsNaN(mass) || double.IsInfinity(mass) || mass <= 0) || location.IsNaNOrInfinity || velocity.IsNaNOrInfinity || force.IsNaNOrInfinity)
+            if ((double.IsNaN(mass) || double.IsInfinity(mass) || mass <= 0) || (double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0) || location.IsNaNOrInfinity || velocity.IsNaNOrInfinity || force.IsNaNOrInfinity)
             {
                 throw new ArgumentException();
             }
@@ -35,17 +36,21 @@ namespace Multibody
             //
 
             _Mass = mass;
+            _Radius = radius;
             _Location = location;
             _Velocity = velocity;
             _Force = force;
         }
 
-        public Particle(double mass, Com.PointD3D location, Com.PointD3D velocity) : this(mass, location, velocity, Com.PointD3D.Zero)
+        public Particle(double mass, double radius, Com.PointD3D location, Com.PointD3D velocity) : this(mass, radius, location, velocity, Com.PointD3D.Zero)
         {
         }
 
         // 获取此 Particle 对象的质量（千克）
         public double Mass => _Mass;
+
+        // 获取此 Particle 对象的半径（米）
+        public double Radius => _Radius;
 
         // 获取此 Particle 对象的位置（米）
         public Com.PointD3D Location => _Location;
@@ -59,7 +64,7 @@ namespace Multibody
         // 返回此 Particle 对象的副本
         public Particle Copy()
         {
-            return new Particle(_Mass, _Location, _Velocity, _Force);
+            return new Particle(_Mass, _Radius, _Location, _Velocity, _Force);
         }
 
         // 将此 Particle 对象运动指定的时长（秒）
