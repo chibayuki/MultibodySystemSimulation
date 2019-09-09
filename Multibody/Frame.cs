@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 namespace Multibody
 {
     // 帧，表示若干粒子的瞬时状态
-    internal class Frame
+    internal sealed class Frame
     {
         private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）
         private const double MinimizeDistanceSquared = 1.0; // 计算万有引力的最小距离（米）
@@ -33,7 +33,7 @@ namespace Multibody
                 throw new ArgumentException();
             }
 
-            if(particles==null|| particles.Length<=0)
+            if (particles == null || particles.Length <= 0)
             {
                 throw new ArgumentNullException();
             }
@@ -41,7 +41,7 @@ namespace Multibody
             //
 
             _Time = time;
-            _Particles = new List<Particle>(0);
+            _Particles = new List<Particle>(particles.Length);
 
             foreach (Particle particle in particles)
             {
@@ -64,7 +64,7 @@ namespace Multibody
             //
 
             _Time = time;
-            _Particles = new List<Particle>(0);
+            _Particles = new List<Particle>(particles.Count);
 
             foreach (Particle particle in particles)
             {
@@ -84,7 +84,7 @@ namespace Multibody
             return new Frame(_Time, _Particles);
         }
 
-        // 将此 Frame 对象运动指定的秒数
+        // 将此 Frame 对象运动指定的时长（秒）
         public void NextMoment(double second)
         {
             if (double.IsNaN(second) || double.IsInfinity(second) || second <= 0)
@@ -95,6 +95,11 @@ namespace Multibody
             //
 
             _Time += second;
+
+            foreach (Particle particle in _Particles)
+            {
+                particle.RemoveForce();
+            }
 
             for (int i = 0; i < _Particles.Count; i++)
             {
@@ -116,11 +121,6 @@ namespace Multibody
             foreach (Particle particle in _Particles)
             {
                 particle.NextMoment(second);
-            }
-
-            foreach (Particle particle in _Particles)
-            {
-                particle.RemoveForce();
             }
         }
     }

@@ -18,13 +18,127 @@ using System.Threading.Tasks;
 namespace Multibody
 {
     // 多体系统
-    internal class MultibodySystem
+    internal sealed class MultibodySystem
     {
-        private int _Capacity;
-        private int _Count;
-        private Frame _FirstFrame;
-        private List<Frame> _FrameHistory_Part1;
-        private List<Frame> _FrameHistory_Part2;
+        // 通过自动弹出队首元素实现固定容量的队列
+        private sealed class Queue<T>
+        {
+            private int _Capacity;
+            private int _Count;
+            private List<T> _List1;
+            private List<T> _List2;
+
+            public Queue(int capacity)
+            {
+                _Capacity = capacity;
+                _Count = 0;
+                _List1 = new List<T>(_Capacity);
+                _List2 = new List<T>(_Capacity);
+            }
+
+            public Queue() : this(0)
+            {
+            }
+
+            // 获取或设置此 Queue 对象的指定索引的元素
+            public T this[int index]
+            {
+                get
+                {
+                    if (index < 0 || index >= _Count)
+                    {
+                        throw new ArgumentException();
+                    }
+
+                    //
+
+                    if (_List1.Count < _Capacity)
+                    {
+                        return _List1[index];
+                    }
+                    else
+                    {
+                        int _index = _List1.Count + _List2.Count - _Capacity + index;
+
+                        if (_index < _Capacity)
+                        {
+                            return _List1[_index];
+                        }
+                        else
+                        {
+                            return _List2[_index - _Capacity];
+                        }
+                    }
+                }
+
+                set
+                {
+                    if (index < 0 || index >= _Count)
+                    {
+                        throw new ArgumentException();
+                    }
+
+                    //
+
+                    if (_List1.Count < _Capacity)
+                    {
+                        _List1[index] = value;
+                    }
+                    else
+                    {
+                        int _index = _List1.Count + _List2.Count - _Capacity + index;
+
+                        if (_index < _Capacity)
+                        {
+                            _List1[_index] = value;
+                        }
+                        else
+                        {
+                            _List2[_index - _Capacity] = value;
+                        }
+                    }
+                }
+            }
+
+            // 获取此 Queue 对象的容量
+            public int Capacity => _Capacity;
+
+            // 获取此 Queue 对象的元素数目
+            public int Count => _Count;
+
+            // 向此 Queue 对象的队尾添加一个元素
+            public void Add(T item)
+            {
+                if (_List1.Count < _Capacity)
+                {
+                    _List1.Add(item);
+                    _Count++;
+                }
+                else
+                {
+                    if (_List2.Count >= _Capacity)
+                    {
+                        List<T> temp = _List1;
+                        _List1 = _List2;
+                        _List2 = temp;
+                        _List2.Clear();
+                    }
+
+                    _List2.Add(item);
+                }
+            }
+
+            // 删除此 Queue 对象的所有元素
+            public void Clear()
+            {
+                _Count = 0;
+                _List1.Clear();
+                _List2.Clear();
+            }
+        }
+
+        private Frame _InitialFrame;
+        private Queue<Frame> _FrameHistory;
 
         public MultibodySystem(int capacity, params Particle[] particles)
         {
@@ -36,48 +150,25 @@ namespace Multibody
             Reset(capacity, particles);
         }
 
-        // 获取此 MultibodySystem 对象的第一帧
-        public Frame FirstFrame => _FirstFrame;
+        // 获取此 MultibodySystem 对象的初始帧
+        public Frame InitialFrame => _InitialFrame;
 
-        // 获取此 MultibodySystem 对象的最后一帧
-        public Frame LastFrame => Frame(_Count - 1);
+        // 获取此 MultibodySystem 对象的最新一帧
+        public Frame LatestFrame => _FrameHistory[_FrameHistory.Count - 1];
 
         // 获取此 MultibodySystem 对象的帧容量
-        public int FrameCapacity => _Capacity;
+        public int FrameCapacity => _FrameHistory.Capacity;
 
         // 获取此 MultibodySystem 对象的总帧数
-        public int FrameCount => _Count;
+        public int FrameCount => _FrameHistory.Count;
 
         // 获取此 MultibodySystem 对象的指定帧
         public Frame Frame(int index)
         {
-            if (index < 0 || index >= _Count)
-            {
-                throw new ArgumentException();
-            }
-
-            //
-
-            if (_FrameHistory_Part1.Count < _Capacity)
-            {
-                return _FrameHistory_Part1[index];
-            }
-            else
-            {
-                int _index = _FrameHistory_Part1.Count + _FrameHistory_Part2.Count - _Capacity + index;
-
-                if (_index < _Capacity)
-                {
-                    return _FrameHistory_Part1[_index];
-                }
-                else
-                {
-                    return _FrameHistory_Part2[_index - _Capacity];
-                }
-            }
+            return _FrameHistory[index];
         }
 
-        // 将此 MultibodySystem 对象运动指定的秒数
+        // 将此 MultibodySystem 对象运动指定的时长（秒）
         public void NextMoment(double second)
         {
             if (double.IsNaN(second) || double.IsInfinity(second) || second <= 0)
@@ -87,34 +178,18 @@ namespace Multibody
 
             //
 
-            Frame frame = LastFrame.Copy();
+            Frame frame = LatestFrame.Copy();
 
             frame.NextMoment(second);
 
-            if (_FrameHistory_Part1.Count < _Capacity)
-            {
-                _FrameHistory_Part1.Add(frame);
-                _Count++;
-            }
-            else if (_FrameHistory_Part2.Count < _Capacity)
-            {
-                _FrameHistory_Part2.Add(frame);
-            }
-            else
-            {
-                _FrameHistory_Part1 = _FrameHistory_Part2;
-                _FrameHistory_Part2 = new List<Frame>(_Capacity);
-                _FrameHistory_Part2.Add(frame);
-            }
+            _FrameHistory.Add(frame);
         }
 
         // 将此 MultibodySystem 对象回到第一帧
         public void Restart()
         {
-            _FrameHistory_Part1.Clear();
-            _FrameHistory_Part2.Clear();
-            _FrameHistory_Part1.Add(_FirstFrame.Copy());
-            _Count = 1;
+            _FrameHistory.Clear();
+            _FrameHistory.Add(_InitialFrame.Copy());
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
@@ -132,12 +207,10 @@ namespace Multibody
 
             //
 
-            _Capacity = capacity;
-            _FirstFrame = new Frame(0, particles);
-            _FrameHistory_Part1 = new List<Frame>(_Capacity);
-            _FrameHistory_Part2 = new List<Frame>(_Capacity);
-            _FrameHistory_Part1.Add(_FirstFrame.Copy());
-            _Count = 1;
+            _InitialFrame = new Frame(0, particles);
+
+            _FrameHistory = new Queue<Frame>(capacity);
+            _FrameHistory.Add(_InitialFrame.Copy());
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
@@ -155,12 +228,10 @@ namespace Multibody
 
             //
 
-            _Capacity = capacity;
-            _FirstFrame = new Frame(0, particles);
-            _FrameHistory_Part1 = new List<Frame>(_Capacity);
-            _FrameHistory_Part2 = new List<Frame>(_Capacity);
-            _FrameHistory_Part1.Add(_FirstFrame.Copy());
-            _Count = 1;
+            _InitialFrame = new Frame(0, particles);
+
+            _FrameHistory = new Queue<Frame>(capacity);
+            _FrameHistory.Add(_InitialFrame.Copy());
         }
     }
 }

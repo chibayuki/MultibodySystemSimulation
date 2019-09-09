@@ -81,18 +81,12 @@ namespace Multibody
         {
             List<Particle> particles = new List<Particle>();
 
-            /*for (int i = 0; i < 3; i++)
-            {
-                particles.Add(new Particle(
-                    Com.Statistics.RandomDouble(1E6, 1E7),
-                    new Com.PointD3D(Com.Statistics.RandomInteger(500, 1000), Com.Statistics.RandomInteger(300, 700), 0),
-                    new Com.PointD3D(Com.Statistics.RandomDouble(-0.001, 0.001), Com.Statistics.RandomDouble(-0.001, 0.001), 0)
-                    ));
-            }*/
-
             particles.Add(new Particle(1E7, new Com.PointD3D(700, 500, 0), new Com.PointD3D(0, 0.0012, 0)));
-            particles.Add(new Particle(5E6, new Com.PointD3D(800, 500, 0), new Com.PointD3D(0, -0.0021, 0)));
-            particles.Add(new Particle(1E6, new Com.PointD3D(400, 500, 0), new Com.PointD3D(0, -0.0014, 0)));
+            particles.Add(new Particle(5E6, new Com.PointD3D(780, 500, 0), new Com.PointD3D(0, -0.0021, 0)));
+            particles.Add(new Particle(1E6, new Com.PointD3D(440, 500, 0), new Com.PointD3D(0, -0.0016, 0)));
+            particles.Add(new Particle(5E4, new Com.PointD3D(420, 500, 0), new Com.PointD3D(0, -0.0029, 0)));
+            particles.Add(new Particle(2E5, new Com.PointD3D(1150, 500, 0), new Com.PointD3D(0, 0.0017, 0)));
+            particles.Add(new Particle(1E4, new Com.PointD3D(1170, 500, 0), new Com.PointD3D(0, 0.0024, 0)));
 
             _MultibodySystem = new MultibodySystem(1000000, particles);
         }
@@ -122,14 +116,14 @@ namespace Multibody
 
                 RectangleF bitmapBounds = new RectangleF(new PointF(), _MultibodyBitmap.Size);
 
-                List<Particle> particles = _MultibodySystem.LastFrame.Particles;
+                List<Particle> particles = _MultibodySystem.LatestFrame.Particles;
 
                 int FrameCount = _MultibodySystem.FrameCount;
 
                 for (int i = 0; i < particles.Count; i++)
                 {
                     Com.PointD location = CoordinateTransform(particles[i].Location);
-                    Com.ColorX color = Com.ColorX.FromHSL((31 * i) % 360, 100, 70);
+                    Com.ColorX color = Com.ColorX.FromHSL((47 * i) % 360, 100, 70);
 
                     if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
                     {
@@ -178,7 +172,7 @@ namespace Multibody
 
         private void Timer_Graph_Tick(object sender, EventArgs e)
         {
-            for (int i = 0; i < 20000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 _MultibodySystem.NextMoment(1);
             }
