@@ -90,7 +90,7 @@ namespace Multibody
                 new Particle(2E4, 1, new Com.PointD3D(320, 500, 2000), new Com.PointD3D(0, 0.0017, 0))
             };
 
-            _MultibodySystem = new MultibodySystem(1000000, particles);
+            _MultibodySystem = new MultibodySystem(1, 1000, 1000000, particles);
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -135,10 +135,10 @@ namespace Multibody
                         }
                     }
 
-                    for (int j = FrameCount - 1; j >= 1000; j -= 1000)
+                    for (int j = FrameCount - 1; j >= 1; j--)
                     {
                         Com.PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
-                        Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1000).Particles[i].Location);
+                        Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
 
                         if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                         {
@@ -174,10 +174,7 @@ namespace Multibody
 
         private void Timer_Graph_Tick(object sender, EventArgs e)
         {
-            for (int i = 0; i < 10000; i++)
-            {
-                _MultibodySystem.NextMoment(1);
-            }
+            _MultibodySystem.NextMoment(10000);
 
             _RepaintMultibodyBitmap();
         }
