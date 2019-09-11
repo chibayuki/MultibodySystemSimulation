@@ -21,23 +21,19 @@ namespace Multibody
     internal sealed class MultibodySystem
     {
         // 通过自动弹出队首元素实现固定容量的队列
-        private sealed class Queue<T>
+        private sealed class FixedQueue<T>
         {
             private int _Capacity;
+            private int _StartIndex;
             private int _Count;
-            private List<T> _List1;
-            private List<T> _List2;
+            private T[] _TArray;
 
-            public Queue(int capacity)
+            public FixedQueue(int capacity)
             {
                 _Capacity = capacity;
+                _StartIndex = 0;
                 _Count = 0;
-                _List1 = new List<T>(_Capacity);
-                _List2 = new List<T>(_Capacity);
-            }
-
-            public Queue() : this(0)
-            {
+                _TArray = new T[_Capacity];
             }
 
             // 获取或设置此 Queue 对象的指定索引的元素
@@ -52,23 +48,14 @@ namespace Multibody
 
                     //
 
-                    if (_List1.Count < _Capacity)
-                    {
-                        return _List1[index];
-                    }
-                    else
-                    {
-                        int _index = _List1.Count + _List2.Count - _Capacity + index;
+                    int _index = _StartIndex + index;
 
-                        if (_index < _Capacity)
-                        {
-                            return _List1[_index];
-                        }
-                        else
-                        {
-                            return _List2[_index - _Capacity];
-                        }
+                    if (_index >= _Capacity)
+                    {
+                        _index -= _Capacity;
                     }
+
+                    return _TArray[_index];
                 }
 
                 set
@@ -80,23 +67,14 @@ namespace Multibody
 
                     //
 
-                    if (_List1.Count < _Capacity)
-                    {
-                        _List1[index] = value;
-                    }
-                    else
-                    {
-                        int _index = _List1.Count + _List2.Count - _Capacity + index;
+                    int _index = _StartIndex + index;
 
-                        if (_index < _Capacity)
-                        {
-                            _List1[_index] = value;
-                        }
-                        else
-                        {
-                            _List2[_index - _Capacity] = value;
-                        }
+                    if (_index >= _Capacity)
+                    {
+                        _index -= _Capacity;
                     }
+
+                    _TArray[_index] = value;
                 }
             }
 
@@ -107,38 +85,50 @@ namespace Multibody
             public int Count => _Count;
 
             // 向此 Queue 对象的队尾添加一个元素
-            public void Add(T item)
+            public void Push(T item)
             {
-                if (_List1.Count < _Capacity)
+                if (_Count < _Capacity)
                 {
-                    _List1.Add(item);
                     _Count++;
+                }
+                else if (_StartIndex < _Capacity)
+                {
+                    _StartIndex++;
                 }
                 else
                 {
-                    if (_List2.Count >= _Capacity)
-                    {
-                        List<T> temp = _List1;
-                        _List1 = _List2;
-                        _List2 = temp;
-                        _List2.Clear();
-                    }
-
-                    _List2.Add(item);
+                    _StartIndex = 0;
                 }
+
+                this[_Count - 1] = item;
+            }
+
+            // 从此 Queue 对象的队首取出一个元素
+            public T Pop()
+            {
+                T result = this[0];
+
+                _StartIndex++;
+                _Count--;
+
+                return result;
             }
 
             // 删除此 Queue 对象的所有元素
             public void Clear()
             {
+                _StartIndex = 0;
                 _Count = 0;
-                _List1.Clear();
-                _List2.Clear();
+
+                for (int i = 0; i < _Capacity; i++)
+                {
+                    _TArray[i] = default(T);
+                }
             }
         }
 
         private Frame _InitialFrame;
-        private Queue<Frame> _FrameHistory;
+        private FixedQueue<Frame> _FrameHistory;
 
         public MultibodySystem(int capacity, params Particle[] particles)
         {
@@ -182,14 +172,14 @@ namespace Multibody
 
             frame.NextMoment(second);
 
-            _FrameHistory.Add(frame);
+            _FrameHistory.Push(frame);
         }
 
         // 将此 MultibodySystem 对象回到第一帧
         public void Restart()
         {
             _FrameHistory.Clear();
-            _FrameHistory.Add(_InitialFrame.Copy());
+            _FrameHistory.Push(_InitialFrame.Copy());
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
@@ -209,8 +199,8 @@ namespace Multibody
 
             _InitialFrame = new Frame(0, particles);
 
-            _FrameHistory = new Queue<Frame>(capacity);
-            _FrameHistory.Add(_InitialFrame.Copy());
+            _FrameHistory = new FixedQueue<Frame>(capacity);
+            _FrameHistory.Push(_InitialFrame.Copy());
         }
 
         // 重新设置此 MultibodySystem 对象的所有粒子
@@ -230,8 +220,8 @@ namespace Multibody
 
             _InitialFrame = new Frame(0, particles);
 
-            _FrameHistory = new Queue<Frame>(capacity);
-            _FrameHistory.Add(_InitialFrame.Copy());
+            _FrameHistory = new FixedQueue<Frame>(capacity);
+            _FrameHistory.Push(_InitialFrame.Copy());
         }
     }
 }
