@@ -81,13 +81,13 @@ namespace Multibody
         {
             List<Particle> particles = new List<Particle>
             {
-                new Particle(1E7, 3, new Com.PointD3D(700, 500, 2000), new Com.PointD3D(0, 0.0012, 0)),
-                new Particle(5E6, 3, new Com.PointD3D(780, 500, 2000), new Com.PointD3D(0, -0.0021, 0)),
-                new Particle(1E6, 2, new Com.PointD3D(440, 500, 2000), new Com.PointD3D(0, -0.0016, 0)),
-                new Particle(5E4, 2, new Com.PointD3D(420, 500, 2000), new Com.PointD3D(0, -0.0029, 0)),
-                new Particle(2E5, 1, new Com.PointD3D(1150, 500, 2000), new Com.PointD3D(0, 0.0017, 0)),
-                new Particle(1E4, 1, new Com.PointD3D(1170, 500, 2000), new Com.PointD3D(0, 0.0024, 0)),
-                new Particle(2E4, 1, new Com.PointD3D(320, 500, 2000), new Com.PointD3D(0, 0.0017, 0))
+                new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0)),
+                new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0)),
+                new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0)),
+                new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0)),
+                new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0)),
+                new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0)),
+                new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0))
             };
 
             _MultibodySystem = new MultibodySystem(1, 1000, 1000000, particles);
@@ -131,7 +131,9 @@ namespace Multibody
                     {
                         using (Brush Br = new SolidBrush(color.ToColor()))
                         {
-                            Grap.FillEllipse(Br, new RectangleF((float)location.X - 2.5F, (float)location.Y - 2.5F, 5, 5));
+                            float r = (float)Math.Max(1, new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z);
+
+                            Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
                         }
                     }
 
@@ -181,7 +183,7 @@ namespace Multibody
 
         private Com.PointD CoordinateTransform(Com.PointD3D pt)
         {
-            return pt.ProjectToXY(new Com.PointD3D(750, 500, 0), 1000);
+            return pt.ProjectToXY(new Com.PointD3D(750, 500, 0), new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module);
         }
     }
 }

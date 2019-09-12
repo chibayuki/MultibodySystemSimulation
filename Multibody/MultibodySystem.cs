@@ -21,14 +21,14 @@ namespace Multibody
     internal sealed class MultibodySystem
     {
         // 通过自动弹出队首元素实现固定容量的队列
-        private sealed class FixedQueue<T>
+        private sealed class _FixedQueue<T>
         {
             private int _Capacity;
             private int _StartIndex;
             private int _Count;
             private T[] _TArray;
 
-            public FixedQueue(int capacity)
+            public _FixedQueue(int capacity)
             {
                 if (capacity < 0)
                 {
@@ -43,7 +43,7 @@ namespace Multibody
                 _TArray = new T[_Capacity];
             }
 
-            // 获取或设置此 Queue 对象的指定索引的元素
+            // 获取或设置此 _FixedQueue 对象的指定索引的元素
             public T this[int index]
             {
                 get
@@ -85,13 +85,13 @@ namespace Multibody
                 }
             }
 
-            // 获取此 Queue 对象的容量
+            // 获取此 _FixedQueue 对象的容量
             public int Capacity => _Capacity;
 
-            // 获取此 Queue 对象的元素数目
+            // 获取此 _FixedQueue 对象的元素数目
             public int Count => _Count;
 
-            // 向此 Queue 对象的队尾添加一个元素
+            // 向此 _FixedQueue 对象的队尾添加一个元素
             public void Push(T item)
             {
                 if (_Count < _Capacity)
@@ -110,7 +110,7 @@ namespace Multibody
                 this[_Count - 1] = item;
             }
 
-            // 从此 Queue 对象的队首取出一个元素
+            // 从此 _FixedQueue 对象的队首取出一个元素
             public T Pop()
             {
                 T result = this[0];
@@ -121,7 +121,7 @@ namespace Multibody
                 return result;
             }
 
-            // 删除此 Queue 对象的所有元素
+            // 删除此 _FixedQueue 对象的所有元素
             public void Clear()
             {
                 _StartIndex = 0;
@@ -138,7 +138,7 @@ namespace Multibody
         private double _LocusResolution;
         private double _LocusLength;
         private Frame _InitialFrame;
-        private FixedQueue<Frame> _FrameHistory;
+        private _FixedQueue<Frame> _FrameHistory;
 
         public MultibodySystem(double dynamicResolution, double locusResolution, double locusLength, params Particle[] particles)
         {
@@ -180,21 +180,21 @@ namespace Multibody
         // 将此 MultibodySystem 对象运动指定的时长（秒）
         public void NextMoment(double second)
         {
-            if (double.IsNaN(second) || double.IsInfinity(second) || second < _DynamicResolution)
+            if (double.IsNaN(second) || double.IsInfinity(second) || second < _LocusResolution)
             {
                 throw new ArgumentException();
             }
 
             //
 
-            int count1 = (int)Math.Round(second / _LocusResolution);
-            int count2 = (int)Math.Round(_LocusResolution / _DynamicResolution);
+            int countL = (int)Math.Round(second / _LocusResolution);
+            int countD = (int)Math.Round(_LocusResolution / _DynamicResolution);
 
-            for (int i = 0; i < count1; i++)
+            for (int i = 0; i < countL; i++)
             {
                 Frame frame = LatestFrame.Copy();
 
-                for (int j = 0; j < count2; j++)
+                for (int j = 0; j < countD; j++)
                 {
                     frame.NextMoment(_DynamicResolution);
                 }
@@ -203,14 +203,14 @@ namespace Multibody
             }
         }
 
-        // 将此 MultibodySystem 对象运动与轨迹分辨率相等的时长
+        // 将此 MultibodySystem 对象运动与轨迹分辨率相同的时长
         public void NextMoment()
         {
-            int count = (int)Math.Round(_LocusResolution / _DynamicResolution);
+            int countD = (int)Math.Round(_LocusResolution / _DynamicResolution);
 
             Frame frame = LatestFrame.Copy();
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < countD; i++)
             {
                 frame.NextMoment(_DynamicResolution);
             }
@@ -254,8 +254,7 @@ namespace Multibody
             _LocusResolution = locusResolution;
             _LocusLength = locusLength;
             _InitialFrame = new Frame(0, particles);
-
-            _FrameHistory = new FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
+            _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
             _FrameHistory.Push(_InitialFrame.Copy());
         }
 
@@ -288,8 +287,7 @@ namespace Multibody
             _LocusResolution = locusResolution;
             _LocusLength = locusLength;
             _InitialFrame = new Frame(0, particles);
-
-            _FrameHistory = new FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
+            _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
             _FrameHistory.Push(_InitialFrame.Copy());
         }
     }

@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
-    // 粒子，表示三维空间中的质点
+    // 粒子，表示三维空间中的有体积的质点
     internal sealed class Particle
     {
         private double _Mass;
@@ -51,6 +51,9 @@ namespace Multibody
 
         // 获取此 Particle 对象的半径（米）
         public double Radius => _Radius;
+
+        // 获取此 Particle 对象的密度（千克/立方米）
+        private double Density => _Mass * 3 / (4 * Math.PI) / (_Radius * _Radius * _Radius);
 
         // 获取此 Particle 对象的位置（米）
         public Com.PointD3D Location => _Location;
