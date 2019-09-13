@@ -68,8 +68,10 @@ namespace Multibody
         private void FormDefine()
         {
             Me.Caption = Application.ProductName;
+            Me.ShowCaptionBarColor = false;
+            Me.EnableCaptionBarTransparent = false;
             Me.Theme = Com.WinForm.Theme.Black;
-
+            Me.ThemeColor = Com.ColorManipulation.GetRandomColorX();
             Me.Location = new Point(0, 0);
             Me.Size = new Size(1500, 1000);
 
@@ -114,7 +116,7 @@ namespace Multibody
                 _MultibodyBitmap.Dispose();
             }
 
-            _MultibodyBitmap = new Bitmap(Math.Max(1, Panel_Main.Width), Math.Max(1, Panel_Main.Height));
+            _MultibodyBitmap = new Bitmap(Math.Max(1, Me.Width), Math.Max(1, Me.Height));
 
             using (Graphics Grap = Graphics.FromImage(_MultibodyBitmap))
             {
@@ -166,7 +168,9 @@ namespace Multibody
 
             if (_MultibodyBitmap != null)
             {
-                Panel_Main.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, 0));
+                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
+
+                Panel_Main.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
             }
         }
 
@@ -179,7 +183,9 @@ namespace Multibody
 
             if (_MultibodyBitmap != null)
             {
-                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, 0));
+                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
+
+                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
             }
         }
 
@@ -192,7 +198,7 @@ namespace Multibody
 
         private Com.PointD CoordinateTransform(Com.PointD3D pt)
         {
-            return pt.ProjectToXY(new Com.PointD3D(750, 500, 0), new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module);
+            return pt.ProjectToXY(new Com.PointD3D(Me.Width / 2, Me.Height / 2, 0), new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module);
         }
     }
 }
