@@ -79,16 +79,21 @@ namespace Multibody
 
         private void Me_Loading(object sender, EventArgs e)
         {
-            List<Particle> particles = new List<Particle>
-            {
-                new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0)),
-                new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0)),
-                new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0)),
-                new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0)),
-                new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0)),
-                new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0)),
-                new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0))
-            };
+            List<Particle> particles = new List<Particle>();
+
+            int h = Com.Statistics.RandomInteger(360);
+            const int s = 100;
+            const int v = 70;
+            int i = 0;
+            const int d = 37;
+
+            particles.Add(new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            particles.Add(new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
 
             _MultibodySystem = new MultibodySystem(1, 1000, 1000000, particles);
         }
@@ -125,17 +130,6 @@ namespace Multibody
                 for (int i = 0; i < particles.Count; i++)
                 {
                     Com.PointD location = CoordinateTransform(particles[i].Location);
-                    Com.ColorX color = Com.ColorX.FromHSL((47 * i) % 360, 100, 70);
-
-                    if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
-                    {
-                        using (Brush Br = new SolidBrush(color.ToColor()))
-                        {
-                            float r = (float)Math.Max(1, new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z);
-
-                            Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
-                        }
-                    }
 
                     for (int j = FrameCount - 1; j >= 1; j--)
                     {
@@ -144,7 +138,22 @@ namespace Multibody
 
                         if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                         {
-                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, color.AtOpacity(100 * j / FrameCount).ToColor(), 1, true);
+                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
+                        }
+                    }
+                }
+
+                for (int i = 0; i < particles.Count; i++)
+                {
+                    Com.PointD location = CoordinateTransform(particles[i].Location);
+
+                    if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                    {
+                        using (Brush Br = new SolidBrush(particles[i].Color))
+                        {
+                            float r = (float)Math.Max(1, new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z);
+
+                            Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
                         }
                     }
                 }
