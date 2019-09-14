@@ -122,7 +122,8 @@ namespace Multibody
                 }
             }
 
-            public T First
+            // 获取或设置此 _LinkedQueue 对象的队首元素
+            public T Head
             {
                 get
                 {
@@ -149,7 +150,8 @@ namespace Multibody
                 }
             }
 
-            public T Last
+            // 获取或设置此 _LinkedQueue 对象的队尾元素
+            public T Tail
             {
                 get
                 {
@@ -166,7 +168,7 @@ namespace Multibody
                     }
                     else
                     {
-                        return _Next.Last;
+                        return _Next.Tail;
                     }
                 }
 
@@ -185,7 +187,7 @@ namespace Multibody
                     }
                     else
                     {
-                        _Next.Last = value;
+                        _Next.Tail = value;
                     }
                 }
             }
@@ -194,7 +196,7 @@ namespace Multibody
             public int Count => (_Next == null ? _Count : _Count + _Next.Count);
 
             // 向此 _LinkedQueue 对象的队尾添加一个元素
-            public void Push(T item)
+            public void Enqueue(T item)
             {
                 int index = _StartIndex + _Count;
 
@@ -210,12 +212,12 @@ namespace Multibody
                         _Next = new _LinkedQueue<T>(_BlockSize);
                     }
 
-                    _Next.Push(item);
+                    _Next.Enqueue(item);
                 }
             }
 
             // 从此 _LinkedQueue 对象的队首取出一个元素
-            public T Pop()
+            public T Dequeue()
             {
                 T result = _TArray[_StartIndex];
 
@@ -281,7 +283,7 @@ namespace Multibody
 
                 if (count > 1)
                 {
-                    return (count * 1E7 / (_TicksHistory.Last.Ticks - _TicksHistory.First.Ticks));
+                    return (count * 1E7 / (_TicksHistory.Tail.Ticks - _TicksHistory.Head.Ticks));
                 }
                 else
                 {
@@ -304,7 +306,7 @@ namespace Multibody
 
                 if (count > 1)
                 {
-                    return ((_TicksHistory.Last.Ticks - _TicksHistory.First.Ticks) * 1E-7 / count);
+                    return ((_TicksHistory.Tail.Ticks - _TicksHistory.Head.Ticks) * 1E-7 / count);
                 }
                 else
                 {
@@ -318,16 +320,16 @@ namespace Multibody
         {
             long ticks = DateTime.UtcNow.Ticks;
 
-            if (_TicksHistory.Count > 0 && ticks < _TicksHistory.Last.Ticks)
+            if (_TicksHistory.Count > 0 && ticks < _TicksHistory.Tail.Ticks)
             {
                 Reset();
             }
 
-            _TicksHistory.Push(new _TicksWithCount(ticks, count));
+            _TicksHistory.Enqueue(new _TicksWithCount(ticks, count));
 
-            while (_TicksHistory.Count > 2 && ticks - _TicksHistory.First.Ticks > _DeltaTicks)
+            while (_TicksHistory.Count > 2 && ticks - _TicksHistory.Head.Ticks > _DeltaTicks)
             {
-                _TicksHistory.Pop();
+                _TicksHistory.Dequeue();
             }
         }
 

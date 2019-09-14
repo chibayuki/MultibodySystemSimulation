@@ -85,6 +85,34 @@ namespace Multibody
                 }
             }
 
+            // 获取或设置此 _FixedQueue 对象的队首元素
+            public T Head
+            {
+                get
+                {
+                    return this[0];
+                }
+
+                set
+                {
+                    this[0] = value;
+                }
+            }
+
+            // 获取或设置此 _FixedQueue 对象的队尾元素
+            public T Tail
+            {
+                get
+                {
+                    return this[_Count - 1];
+                }
+
+                set
+                {
+                    this[_Count - 1] = value;
+                }
+            }
+
             // 获取此 _FixedQueue 对象的容量
             public int Capacity => _Capacity;
 
@@ -92,7 +120,7 @@ namespace Multibody
             public int Count => _Count;
 
             // 向此 _FixedQueue 对象的队尾添加一个元素
-            public void Push(T item)
+            public void Enqueue(T item)
             {
                 if (_Count < _Capacity)
                 {
@@ -111,7 +139,7 @@ namespace Multibody
             }
 
             // 从此 _FixedQueue 对象的队首取出一个元素
-            public T Pop()
+            public T Dequeue()
             {
                 T result = this[0];
 
@@ -165,7 +193,7 @@ namespace Multibody
         public Frame InitialFrame => _InitialFrame;
 
         // 获取此 MultibodySystem 对象的最新一帧
-        public Frame LatestFrame => _FrameHistory[_FrameHistory.Count - 1];
+        public Frame LatestFrame => _FrameHistory.Tail;
 
         // 获取此 MultibodySystem 对象的帧容量
         public int FrameCapacity => _FrameHistory.Capacity;
@@ -219,7 +247,7 @@ namespace Multibody
                     _DynamicFpsCounter.Update(countD % fpsDivD);
                 }
 
-                _FrameHistory.Push(frame);
+                _FrameHistory.Enqueue(frame);
 
                 if (i % fpsDivL == 0)
                 {
@@ -256,7 +284,7 @@ namespace Multibody
                 _DynamicFpsCounter.Update(countD % fpsDivD);
             }
 
-            _FrameHistory.Push(frame);
+            _FrameHistory.Enqueue(frame);
 
             _LocusFpsCounter.Update();
         }
@@ -265,7 +293,7 @@ namespace Multibody
         public void Restart()
         {
             _FrameHistory.Clear();
-            _FrameHistory.Push(_InitialFrame.Copy());
+            _FrameHistory.Enqueue(_InitialFrame.Copy());
             _DynamicFpsCounter = new FpsCounter(32);
             _LocusFpsCounter = new FpsCounter(32);
         }
@@ -300,7 +328,7 @@ namespace Multibody
             _LocusLength = locusLength;
             _InitialFrame = new Frame(0, particles);
             _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
-            _FrameHistory.Push(_InitialFrame.Copy());
+            _FrameHistory.Enqueue(_InitialFrame.Copy());
             _DynamicFpsCounter = new FpsCounter(32);
             _LocusFpsCounter = new FpsCounter(32);
         }
@@ -335,7 +363,7 @@ namespace Multibody
             _LocusLength = locusLength;
             _InitialFrame = new Frame(0, particles);
             _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
-            _FrameHistory.Push(_InitialFrame.Copy());
+            _FrameHistory.Enqueue(_InitialFrame.Copy());
             _DynamicFpsCounter = new FpsCounter(32);
             _LocusFpsCounter = new FpsCounter(32);
         }
