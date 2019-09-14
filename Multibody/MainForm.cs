@@ -106,7 +106,7 @@ namespace Multibody
         }
 
         private MultibodySystem _MultibodySystem = null;
-        private FpsCounter _FpsCounter = new FpsCounter(256);
+        private FrameRateCounter _FrameRateCounter = new FrameRateCounter(240);
 
         private Bitmap _MultibodyBitmap = null;
 
@@ -163,9 +163,9 @@ namespace Multibody
 
                 Grap.DrawString("D: " + _MultibodySystem.DynamicFPS.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight));
                 Grap.DrawString("L: " + _MultibodySystem.LocusFPS.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 25));
-                Grap.DrawString("A: " + _FpsCounter.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 50));
+                Grap.DrawString("A: " + _FrameRateCounter.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 50));
 
-                _FpsCounter.Update();
+                _FrameRateCounter.Update();
             }
         }
 
