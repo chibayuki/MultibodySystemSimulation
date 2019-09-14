@@ -105,9 +105,10 @@ namespace Multibody
             Timer_Graph.Enabled = true;
         }
 
-        MultibodySystem _MultibodySystem = null;
+        private MultibodySystem _MultibodySystem = null;
+        private FpsCounter _FpsCounter = new FpsCounter(256);
 
-        Bitmap _MultibodyBitmap = null;
+        private Bitmap _MultibodyBitmap = null;
 
         private void _UpdateMultibodyBitmap()
         {
@@ -153,12 +154,18 @@ namespace Multibody
                     {
                         using (Brush Br = new SolidBrush(particles[i].Color))
                         {
-                            float r = (float)Math.Max(1, new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z);
+                            float r = Math.Max(1, (float)(new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
 
                             Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
                         }
                     }
                 }
+
+                Grap.DrawString("D: " + _MultibodySystem.DynamicFPS.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight));
+                Grap.DrawString("L: " + _MultibodySystem.LocusFPS.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 25));
+                Grap.DrawString("A: " + _FpsCounter.FrameRate.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 50));
+
+                _FpsCounter.Update();
             }
         }
 

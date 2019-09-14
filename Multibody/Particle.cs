@@ -78,9 +78,9 @@ namespace Multibody
         }
 
         // 将此 Particle 对象运动指定的时长（秒）
-        public void NextMoment(double second)
+        public void NextMoment(double seconds)
         {
-            if (double.IsNaN(second) || double.IsInfinity(second) || second <= 0)
+            if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
                 throw new ArgumentException();
             }
@@ -89,8 +89,8 @@ namespace Multibody
 
             Com.PointD3D acceleration = Acceleration;
 
-            _Location += (_Velocity + acceleration * (second / 2)) * second;
-            _Velocity += acceleration * second;
+            _Location += (_Velocity + acceleration * (seconds / 2)) * seconds;
+            _Velocity += acceleration * seconds;
         }
 
         // 在此 Particle 对象上施加一个作用力（牛顿）

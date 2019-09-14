@@ -54,6 +54,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FpsCounter.cs" />
     <Compile Include="Frame.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>

@@ -84,16 +84,16 @@ namespace Multibody
         }
 
         // 将此 Frame 对象运动指定的时长（秒）
-        public void NextMoment(double second)
+        public void NextMoment(double seconds)
         {
-            if (double.IsNaN(second) || double.IsInfinity(second) || second <= 0)
+            if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
                 throw new ArgumentException();
             }
 
             //
 
-            _Time += second;
+            _Time += seconds;
 
             foreach (Particle particle in _Particles)
             {
@@ -129,7 +129,7 @@ namespace Multibody
 
             foreach (Particle particle in _Particles)
             {
-                particle.NextMoment(second);
+                particle.NextMoment(seconds);
             }
         }
     }

@@ -139,6 +139,8 @@ namespace Multibody
         private double _LocusLength;
         private Frame _InitialFrame;
         private _FixedQueue<Frame> _FrameHistory;
+        private FpsCounter _DynamicFpsCounter;
+        private FpsCounter _LocusFpsCounter;
 
         public MultibodySystem(double dynamicResolution, double locusResolution, double locusLength, params Particle[] particles)
         {
@@ -171,6 +173,12 @@ namespace Multibody
         // 获取此 MultibodySystem 对象的总帧数
         public int FrameCount => _FrameHistory.Count;
 
+        // 获取此 MultibodySystem 对象的动力学帧率
+        public FpsCounter DynamicFPS => _DynamicFpsCounter;
+
+        // 获取此 MultibodySystem 对象的轨迹帧率
+        public FpsCounter LocusFPS => _LocusFpsCounter;
+
         // 获取此 MultibodySystem 对象的指定帧
         public Frame Frame(int index)
         {
@@ -178,28 +186,50 @@ namespace Multibody
         }
 
         // 将此 MultibodySystem 对象运动指定的时长（秒）
-        public void NextMoment(double second)
+        public void NextMoment(double seconds)
         {
-            if (double.IsNaN(second) || double.IsInfinity(second) || second < _LocusResolution)
+            if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < _LocusResolution)
             {
                 throw new ArgumentException();
             }
 
             //
 
-            int countL = (int)Math.Round(second / _LocusResolution);
+            int countL = (int)Math.Round(seconds / _LocusResolution);
             int countD = (int)Math.Round(_LocusResolution / _DynamicResolution);
+            int fpsDivL = Math.Max(1, countL / 10);
+            int fpsDivD = Math.Max(1, countD / 10);
 
-            for (int i = 0; i < countL; i++)
+            for (int i = 1; i <= countL; i++)
             {
                 Frame frame = LatestFrame.Copy();
 
-                for (int j = 0; j < countD; j++)
+                for (int j = 1; j <= countD; j++)
                 {
                     frame.NextMoment(_DynamicResolution);
+
+                    if (j % fpsDivD == 0)
+                    {
+                        _DynamicFpsCounter.Update(fpsDivD);
+                    }
+                }
+
+                if (fpsDivD > 1)
+                {
+                    _DynamicFpsCounter.Update(countD % fpsDivD);
                 }
 
                 _FrameHistory.Push(frame);
+
+                if (i % fpsDivL == 0)
+                {
+                    _LocusFpsCounter.Update(fpsDivL);
+                }
+            }
+
+            if (fpsDivL > 1)
+            {
+                _LocusFpsCounter.Update(countL % fpsDivL);
             }
         }
 
@@ -207,25 +237,40 @@ namespace Multibody
         public void NextMoment()
         {
             int countD = (int)Math.Round(_LocusResolution / _DynamicResolution);
+            int fpsDivD = Math.Max(1, countD / 10);
 
             Frame frame = LatestFrame.Copy();
 
-            for (int i = 0; i < countD; i++)
+            for (int i = 1; i <= countD; i++)
             {
                 frame.NextMoment(_DynamicResolution);
+
+                if (i % fpsDivD == 0)
+                {
+                    _DynamicFpsCounter.Update(fpsDivD);
+                }
+            }
+
+            if (fpsDivD > 1)
+            {
+                _DynamicFpsCounter.Update(countD % fpsDivD);
             }
 
             _FrameHistory.Push(frame);
+
+            _LocusFpsCounter.Update();
         }
 
-        // 将此 MultibodySystem 对象回到第一帧
+        // 将此 MultibodySystem 对象回到初始帧
         public void Restart()
         {
             _FrameHistory.Clear();
             _FrameHistory.Push(_InitialFrame.Copy());
+            _DynamicFpsCounter = new FpsCounter(32);
+            _LocusFpsCounter = new FpsCounter(32);
         }
 
-        // 重新设置此 MultibodySystem 对象的所有粒子
+        // 重新设置此 MultibodySystem 对象的参数与所有粒子
         public void Reset(double dynamicResolution, double locusResolution, double locusLength, params Particle[] particles)
         {
             if (double.IsNaN(dynamicResolution) || double.IsInfinity(dynamicResolution) || dynamicResolution <= 0)
@@ -256,9 +301,11 @@ namespace Multibody
             _InitialFrame = new Frame(0, particles);
             _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
             _FrameHistory.Push(_InitialFrame.Copy());
+            _DynamicFpsCounter = new FpsCounter(32);
+            _LocusFpsCounter = new FpsCounter(32);
         }
 
-        // 重新设置此 MultibodySystem 对象的所有粒子
+        // 重新设置此 MultibodySystem 对象的参数与所有粒子
         public void Reset(double dynamicResolution, double locusResolution, double locusLength, List<Particle> particles)
         {
             if (double.IsNaN(dynamicResolution) || double.IsInfinity(dynamicResolution) || dynamicResolution <= 0)
@@ -289,6 +336,8 @@ namespace Multibody
             _InitialFrame = new Frame(0, particles);
             _FrameHistory = new _FixedQueue<Frame>(locusLength == 0 ? 1 : (int)Math.Ceiling(locusLength / locusResolution));
             _FrameHistory.Push(_InitialFrame.Copy());
+            _DynamicFpsCounter = new FpsCounter(32);
+            _LocusFpsCounter = new FpsCounter(32);
         }
     }
 }
