@@ -29,7 +29,7 @@ namespace Multibody
         {
             if (capacity < 0)
             {
-                throw new ArgumentException();
+                throw new OverflowException();
             }
 
             //
@@ -121,7 +121,7 @@ namespace Multibody
         {
             if (capacity < 0)
             {
-                throw new ArgumentException();
+                throw new OverflowException();
             }
 
             //

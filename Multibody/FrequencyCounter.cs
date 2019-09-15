@@ -17,20 +17,20 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
-    // 帧率计数器，用于实时计算事件在过去一小段时间间隔内发生的平均频率
-    internal sealed class FrameRateCounter
+    // 频率计数器，用于实时计算在过去一小段时间间隔内某一事件发生的平均频率
+    internal sealed class FrequencyCounter
     {
         // 表示携带计数的计时周期数
         private sealed class _TicksWithCount
         {
-            public long Ticks;
-            public int Count;
+            private long _Ticks;
+            private long _Count;
 
             public _TicksWithCount(long ticks, int count)
             {
-                if (ticks <= 0 || count <= 0)
+                if ((ticks < DateTime.MinValue.Ticks|| ticks > DateTime.MaxValue.Ticks) || count <= 0)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentOutOfRangeException();
                 }
 
                 //
@@ -42,12 +42,40 @@ namespace Multibody
             public _TicksWithCount(long ticks) : this(ticks, 1)
             {
             }
+
+            // 获取或设置此 _TicksWithCount 对象的计时周期数
+            public long Ticks
+            {
+                get
+                {
+                    return _Ticks;
+                }
+
+                set
+                {
+                    _Ticks = value;
+                }
+            }
+
+            // 获取或设置此 _TicksWithCount 对象的计数
+            public long Count
+            {
+                get
+                {
+                    return _Count;
+                }
+
+                set
+                {
+                    _Count = value;
+                }
+            }
         }
 
-        private long _DeltaTicks;
+        private long _TypicalMeasurementPeriodTicks;
         private FixedQueue<_TicksWithCount> _TicksHistory;
 
-        public FrameRateCounter(double seconds)
+        public FrequencyCounter(double seconds)
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
@@ -56,20 +84,20 @@ namespace Multibody
 
             //
 
-            _DeltaTicks = Math.Max(1, (long)Math.Round(seconds * 1E7));
+            _TypicalMeasurementPeriodTicks = Math.Max(1, (long)Math.Round(seconds * 1E7));
             _TicksHistory = new FixedQueue<_TicksWithCount>(32);
         }
 
-        public FrameRateCounter() : this(1)
+        public FrequencyCounter() : this(1)
         {
         }
 
-        // 获取此 FrameRateCounter 对象的帧率（帧/秒 - 或 - 赫兹）
-        public double FrameRate
+        // 获取此 FrequencyCounter 对象的频率（赫兹）
+        public double Frequency
         {
             get
             {
-                int count = 0;
+                long count = 0;
 
                 for (int i = 0; i < _TicksHistory.Count; i++)
                 {
@@ -87,12 +115,15 @@ namespace Multibody
             }
         }
 
-        // 更新此 FrameRateCounter 对象
+        // 获取此 FrequencyCounter 对象的周期（秒）
+        public double Period => 1 / Frequency;
+
+        // 更新此 FrequencyCounter 对象指定次计数
         public void Update(int count)
         {
             if (count <= 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
@@ -113,7 +144,7 @@ namespace Multibody
                 }
                 else
                 {
-                    if (_TicksHistory.Count == _TicksHistory.Capacity && ticks - _TicksHistory.Head.Ticks <= _DeltaTicks)
+                    if (_TicksHistory.Count == _TicksHistory.Capacity && ticks - _TicksHistory.Head.Ticks <= _TypicalMeasurementPeriodTicks)
                     {
                         _TicksHistory.Resize(_TicksHistory.Capacity * 2);
                     }
@@ -126,19 +157,19 @@ namespace Multibody
                 _TicksHistory.Enqueue(new _TicksWithCount(ticks, count));
             }
 
-            while (_TicksHistory.Count > 2 && ticks - _TicksHistory.Head.Ticks > _DeltaTicks)
+            while (_TicksHistory.Count > 2 && ticks - _TicksHistory.Head.Ticks > _TypicalMeasurementPeriodTicks)
             {
                 _TicksHistory.Dequeue();
             }
         }
 
-        // 更新此 FrameRateCounter 对象
+        // 更新此 FrequencyCounter 对象一次计数
         public void Update()
         {
             Update(1);
         }
 
-        // 重置此 FrameRateCounter 对象
+        // 重置此 FrequencyCounter 对象
         public void Reset()
         {
             _TicksHistory.Clear();

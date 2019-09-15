@@ -25,8 +25,8 @@ namespace Multibody
         private double _LocusLength;
         private Frame _InitialFrame;
         private FixedQueue<Frame> _FrameHistory;
-        private FrameRateCounter _DynamicFrameRateCounter = new FrameRateCounter();
-        private FrameRateCounter _LocusFrameRateCounter = new FrameRateCounter();
+        private FrequencyCounter _DynamicFrameRateCounter = new FrequencyCounter();
+        private FrequencyCounter _LocusFrameRateCounter = new FrequencyCounter();
 
         public MultibodySystem(double dynamicResolution, double locusResolution, double locusLength, params Particle[] particles)
         {
@@ -60,10 +60,10 @@ namespace Multibody
         public int FrameCount => _FrameHistory.Count;
 
         // 获取此 MultibodySystem 对象的动力学帧率
-        public FrameRateCounter DynamicFPS => _DynamicFrameRateCounter;
+        public FrequencyCounter DynamicFPS => _DynamicFrameRateCounter;
 
         // 获取此 MultibodySystem 对象的轨迹帧率
-        public FrameRateCounter LocusFPS => _LocusFrameRateCounter;
+        public FrequencyCounter LocusFPS => _LocusFrameRateCounter;
 
         // 获取此 MultibodySystem 对象的指定帧
         public Frame Frame(int index)

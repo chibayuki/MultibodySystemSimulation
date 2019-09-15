@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FixedQueue.cs" />
-    <Compile Include="FrameRateCounter.cs" />
+    <Compile Include="FrequencyCounter.cs" />
     <Compile Include="Frame.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
