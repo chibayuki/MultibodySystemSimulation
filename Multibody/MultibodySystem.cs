@@ -25,8 +25,8 @@ namespace Multibody
         private double _LocusLength;
         private Frame _InitialFrame;
         private FixedQueue<Frame> _FrameHistory;
-        private FrameRateCounter _DynamicFrameRateCounter = new FrameRateCounter(10);
-        private FrameRateCounter _LocusFrameRateCounter = new FrameRateCounter(10);
+        private FrameRateCounter _DynamicFrameRateCounter = new FrameRateCounter();
+        private FrameRateCounter _LocusFrameRateCounter = new FrameRateCounter();
 
         public MultibodySystem(double dynamicResolution, double locusResolution, double locusLength, params Particle[] particles)
         {

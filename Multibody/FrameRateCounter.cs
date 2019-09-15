@@ -47,7 +47,7 @@ namespace Multibody
         private long _DeltaTicks;
         private FixedQueue<_TicksWithCount> _TicksHistory;
 
-        public FrameRateCounter(int maxFps, double seconds)
+        public FrameRateCounter(double seconds)
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
@@ -57,14 +57,10 @@ namespace Multibody
             //
 
             _DeltaTicks = Math.Max(1, (long)Math.Round(seconds * 1E7));
-            _TicksHistory = new FixedQueue<_TicksWithCount>(1 + (int)Math.Ceiling(maxFps * seconds));
+            _TicksHistory = new FixedQueue<_TicksWithCount>(32);
         }
 
-        public FrameRateCounter(int maxFps) : this(maxFps, 1)
-        {
-        }
-
-        public FrameRateCounter() : this(1024, 1)
+        public FrameRateCounter() : this(1)
         {
         }
 
@@ -117,6 +113,11 @@ namespace Multibody
                 }
                 else
                 {
+                    if (_TicksHistory.Count == _TicksHistory.Capacity && ticks - _TicksHistory.Head.Ticks <= _DeltaTicks)
+                    {
+                        _TicksHistory.Resize(_TicksHistory.Capacity * 2);
+                    }
+
                     _TicksHistory.Enqueue(new _TicksWithCount(ticks, count));
                 }
             }

@@ -106,7 +106,7 @@ namespace Multibody
         }
 
         private MultibodySystem _MultibodySystem = null;
-        private FrameRateCounter _FrameRateCounter = new FrameRateCounter(240);
+        private FrameRateCounter _FrameRateCounter = new FrameRateCounter();
 
         private Bitmap _MultibodyBitmap = null;
 

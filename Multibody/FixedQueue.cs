@@ -116,6 +116,50 @@ namespace Multibody
         // 获取此 _FixedQueue 对象的元素数目
         public int Count => _Count;
 
+        // 重新设置此 _FixedQueue 对象的容量
+        public void Resize(int capacity)
+        {
+            if (capacity < 0)
+            {
+                throw new ArgumentException();
+            }
+
+            //
+
+            if (capacity != _Capacity)
+            {
+                if (_Count <= 0 || capacity == 0)
+                {
+                    _Capacity = capacity;
+                    _StartIndex = 0;
+                    _Count = 0;
+                    _TArray = new T[_Capacity];
+                }
+                else
+                {
+                    T[] array = new T[capacity];
+
+                    _Count = Math.Min(capacity, _Count);
+
+                    for (int i = 0; i < _Count; i++)
+                    {
+                        int _index = _StartIndex + i;
+
+                        if (_index >= _Capacity)
+                        {
+                            _index -= _Capacity;
+                        }
+
+                        array[i] = _TArray[_index];
+                    }
+
+                    _Capacity = capacity;
+                    _StartIndex = 0;
+                    _TArray = array;
+                }
+            }
+        }
+
         // 向此 _FixedQueue 对象的队尾添加一个元素
         public void Enqueue(T item)
         {
