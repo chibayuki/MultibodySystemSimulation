@@ -140,7 +140,7 @@ namespace Multibody
                 }
                 else if (ticks == tail.Ticks)
                 {
-                    _TicksHistory.Tail.Count += count;
+                    tail.Count += count;
                 }
                 else
                 {

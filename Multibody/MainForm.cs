@@ -161,8 +161,8 @@ namespace Multibody
                     }
                 }
 
-                Grap.DrawString("D: " + _MultibodySystem.DynamicFPS.Frequency.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight));
-                Grap.DrawString("L: " + _MultibodySystem.LocusFPS.Frequency.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 25));
+                Grap.DrawString("D: " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " Hz", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight));
+                Grap.DrawString("K: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " Hz", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 25));
                 Grap.DrawString("A: " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134), new SolidBrush(Color.Silver), new Point(0, Me.CaptionBarHeight + 50));
 
                 _FrameRateCounter.Update();
