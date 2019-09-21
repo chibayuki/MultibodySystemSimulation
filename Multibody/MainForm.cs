@@ -19,6 +19,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Threading;
 
@@ -83,23 +84,19 @@ namespace Multibody
 
         private void Me_Loading(object sender, EventArgs e)
         {
-            List<Particle> particles = new List<Particle>();
-
             int h = Com.Statistics.RandomInteger(360);
             const int s = 100;
             const int v = 70;
             const int d = 37;
             int i = 0;
 
-            particles.Add(new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            particles.Add(new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-
-            _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, particles);
+            _Particles.Add(new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -112,11 +109,12 @@ namespace Multibody
             RedrawThreadStop();
         }
 
+        List<Particle> _Particles = new List<Particle>();
         private MultibodySystem _MultibodySystem = null;
 
         private FrequencyCounter _FrameRateCounter = new FrequencyCounter();
 
-        private double _TimeMag = 100000; // 时间倍率。
+        private double _TimeMag = 100000; // 时间倍率（秒/秒）。
         private double _DynamicsResolution = 1; // 动力学分辨率（秒）。
         private double _KinematicsResolution = 1000; // 运动学分辨率（秒）。
         private double _CacheSize = 1000000; // 缓存大小（秒）。
@@ -132,59 +130,62 @@ namespace Multibody
 
             _MultibodyBitmap = new Bitmap(Math.Max(1, Me.Width), Math.Max(1, Me.Height));
 
-            using (Graphics Grap = Graphics.FromImage(_MultibodyBitmap))
+            if (_MultibodySystem != null)
             {
-                Grap.SmoothingMode = SmoothingMode.AntiAlias;
-                Grap.Clear(Color.Black);
-
-                RectangleF bitmapBounds = new RectangleF(new PointF(), _MultibodyBitmap.Size);
-
-                List<Particle> particles = _MultibodySystem.LatestFrame.Particles;
-
-                int FrameCount = _MultibodySystem.FrameCount;
-
-                for (int i = 0; i < particles.Count; i++)
+                using (Graphics Grap = Graphics.FromImage(_MultibodyBitmap))
                 {
-                    Com.PointD location = CoordinateTransform(particles[i].Location);
+                    Grap.SmoothingMode = SmoothingMode.AntiAlias;
+                    Grap.Clear(Color.Black);
 
-                    for (int j = FrameCount - 1; j >= 1; j--)
+                    RectangleF bitmapBounds = new RectangleF(new PointF(), _MultibodyBitmap.Size);
+
+                    List<Particle> particles = _MultibodySystem.LatestFrame.Particles;
+
+                    int FrameCount = _MultibodySystem.FrameCount;
+
+                    for (int i = 0; i < particles.Count; i++)
                     {
-                        Com.PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
-                        Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
+                        Com.PointD location = CoordinateTransform(particles[i].Location);
 
-                        if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
+                        for (int j = FrameCount - 1; j >= 1; j--)
                         {
-                            Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
+                            Com.PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
+                            Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
+
+                            if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
+                            {
+                                Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
+                            }
                         }
                     }
-                }
 
-                for (int i = 0; i < particles.Count; i++)
-                {
-                    Com.PointD location = CoordinateTransform(particles[i].Location);
-
-                    if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                    for (int i = 0; i < particles.Count; i++)
                     {
-                        using (Brush Br = new SolidBrush(particles[i].Color))
-                        {
-                            float r = Math.Max(1, (float)(new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
+                        Com.PointD location = CoordinateTransform(particles[i].Location);
 
-                            Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
+                        if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                        {
+                            using (Brush Br = new SolidBrush(particles[i].Color))
+                            {
+                                float r = Math.Max(1, (float)(new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
+
+                                Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
+                            }
                         }
                     }
+
+                    using (Brush Br = new SolidBrush(Color.Silver))
+                    {
+                        Font ft = new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134);
+
+                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight));
+                        Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
+                        Grap.DrawString("Graphics:    " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 50));
+                        Grap.DrawString("Time:           " + Com.Text.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
+                    }
+
+                    _FrameRateCounter.Update();
                 }
-
-                using (Brush Br = new SolidBrush(Color.Silver))
-                {
-                    Font ft = new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134);
-
-                    Grap.DrawString("D: " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight));
-                    Grap.DrawString("K: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
-                    Grap.DrawString("A: " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 50));
-                    Grap.DrawString("T: " + Com.Text.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
-                }
-
-                _FrameRateCounter.Update();
             }
         }
 
@@ -215,18 +216,17 @@ namespace Multibody
             }
         }
 
-        // 重绘线程
         private Thread RedrawThread;
 
-        // 重绘线程开始工作
         private void RedrawThreadStart()
         {
-            RedrawThread = new Thread(new ThreadStart(UpdateBitmap));
+            _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+
+            RedrawThread = new Thread(new ThreadStart(RedrawThreadEvent));
             RedrawThread.IsBackground = true;
             RedrawThread.Start();
         }
 
-        // 重绘线程停止工作
         private void RedrawThreadStop()
         {
             if (RedrawThread != null && RedrawThread.IsAlive)
@@ -235,75 +235,94 @@ namespace Multibody
             }
         }
 
-        // 在重绘线程更新位图
-        private void UpdateBitmap()
+        private void RedrawThreadEvent()
         {
             int KCount = 1;
             int SleepMS = 0;
 
+            DateTime LastAdjust = DateTime.MinValue;
+            Stopwatch Watch = new Stopwatch();
+
             while (true)
             {
+                Watch.Restart();
+
                 _MultibodySystem.NextMoment(_KinematicsResolution * KCount);
+
+                Watch.Stop();
+
+                double KSec = Math.Max(0.000001, Watch.ElapsedMilliseconds * 0.001) / KCount;
+
+                Watch.Restart();
 
                 this.Invoke(new Action(_RepaintMultibodyBitmap));
 
+                Watch.Stop();
+
+                double GSec = Math.Max(0.001, Watch.ElapsedMilliseconds * 0.001);
+
                 double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
-                double DFpsExpect = _TimeMag / _DynamicsResolution;
-                double DFpsRatio = DFpsActual / DFpsExpect;
 
-                if (DFpsRatio > 1.01)
+                if ((DateTime.UtcNow - LastAdjust).TotalSeconds >= 1 && DFpsActual > 0)
                 {
-                    /*if (DFpsRatio > 1.1)
-                    {
-                        DFpsRatio = 1.1;
+                    double DFpsExpect = _TimeMag / _DynamicsResolution;
+                    double DFpsRatio = DFpsActual / DFpsExpect;
 
-                        if (KCount > 1)
-                        {
-                            KCount = Math.Max(1, Math.Min(KCount - 1, (int)Math.Round(KCount / DFpsRatio)));
-                        }
-                        else
-                        {
-                            SleepMS = Math.Max(SleepMS + 1, (int)Math.Round(SleepMS * DFpsRatio));
-                        }
-                    }
-                    else*/
+                    if (DFpsRatio > 1.1 || DFpsRatio < 0.9)
                     {
-                        if (KCount > 1)
-                        {
-                            KCount--;
-                        }
-                        else
-                        {
-                            SleepMS++;
-                        }
-                    }
-                }
-                else if (DFpsRatio < 0.99)
-                {
-                    /*if (DFpsRatio < 0.9)
-                    {
-                        DFpsRatio = 0.9;
+                        double KFpsExpect = _TimeMag / _KinematicsResolution;
+                        double KTime = KFpsExpect * KSec;
+                        double GFpsExpect = Math.Min(KFpsExpect, (1 - KTime) / GSec);
 
-                        if (SleepMS > 0)
+                        if (GFpsExpect > 0)
                         {
-                            SleepMS = Math.Min(SleepMS - 1, (int)Math.Round(SleepMS * DFpsRatio));
+                            double GTime = GFpsExpect * GSec;
+                            double SleepTime = 1 - KTime - GTime;
+
+                            if (SleepTime > 0.001)
+                            {
+                                KCount = 1;
+                                SleepMS = (int)Math.Round(SleepTime * 1000 / GFpsExpect);
+                            }
+                            else
+                            {
+                                KCount = (int)Math.Round(Math.Min(KFpsExpect, KFpsExpect / GFpsExpect));
+                                SleepMS = 0;
+                            }
                         }
                         else
                         {
-                            KCount = Math.Max(KCount + 1, (int)Math.Round(KCount / DFpsRatio));
+                            KCount = (int)Math.Round(KFpsExpect);
+                            SleepMS = 0;
                         }
                     }
-                    else*/
+                    else
                     {
-                        if (SleepMS > 0)
+                        if (DFpsRatio > 1.01)
                         {
-                            SleepMS--;
+                            if (KCount > 1)
+                            {
+                                KCount--;
+                            }
+                            else if (SleepMS < 1000)
+                            {
+                                SleepMS++;
+                            }
                         }
-                        else
+                        else if (DFpsRatio < 0.99)
                         {
-                            KCount++;
+                            if (SleepMS > 0)
+                            {
+                                SleepMS--;
+                            }
+                            else if (_FrameRateCounter.Frequency > 1)
+                            {
+                                KCount++;
+                            }
                         }
                     }
+
+                    LastAdjust = DateTime.UtcNow;
                 }
 
                 if (SleepMS > 0)

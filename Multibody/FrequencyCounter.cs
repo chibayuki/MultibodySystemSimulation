@@ -99,12 +99,12 @@ namespace Multibody
             {
                 long count = 0;
 
-                for (int i = 0; i < _TicksHistory.Count; i++)
+                for (int i = 1; i < _TicksHistory.Count; i++)
                 {
                     count += _TicksHistory[i].Count;
                 }
 
-                if (count > 1)
+                if (count > 0)
                 {
                     return (count * 1E7 / (_TicksHistory.Tail.Ticks - _TicksHistory.Head.Ticks));
                 }

@@ -7,7 +7,7 @@
     <ProjectGuid>{F86FFC83-E020-4B22-BA84-FD6C1EBE8073}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>Multibody</RootNamespace>
-    <AssemblyName>Multibody</AssemblyName>
+    <AssemblyName>多体系统模拟</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
