@@ -28,9 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             this.Panel_Main = new System.Windows.Forms.Panel();
-            this.Timer_Graph = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
             // 
             // Panel_Main
@@ -42,11 +40,6 @@
             this.Panel_Main.Size = new System.Drawing.Size(300, 300);
             this.Panel_Main.TabIndex = 0;
             this.Panel_Main.Paint += new System.Windows.Forms.PaintEventHandler(this.Panel_Main_Paint);
-            // 
-            // Timer_Graph
-            // 
-            this.Timer_Graph.Interval = 10;
-            this.Timer_Graph.Tick += new System.EventHandler(this.Timer_Graph_Tick);
             // 
             // MainForm
             // 
@@ -65,6 +58,5 @@
         #endregion
 
         private System.Windows.Forms.Panel Panel_Main;
-        private System.Windows.Forms.Timer Timer_Graph;
     }
 }

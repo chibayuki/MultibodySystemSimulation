@@ -22,8 +22,8 @@ namespace Multibody
     {
         private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）
 
-        public double _Time;
-        public List<Particle> _Particles;
+        private double _Time;
+        private List<Particle> _Particles;
 
         public Frame(double time, params Particle[] particles)
         {
