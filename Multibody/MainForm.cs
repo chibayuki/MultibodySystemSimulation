@@ -2,7 +2,7 @@
 Copyright © 2019 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.190906-0000
+Version 1.0.0.0.DEV.191028-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -23,13 +23,24 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Threading;
 
+using ColorManipulation = Com.ColorManipulation;
+using ColorX = Com.ColorX;
+using Geometry = Com.Geometry;
+using Painting2D = Com.Painting2D;
+using PointD = Com.PointD;
+using PointD3D = Com.PointD3D;
+using Statistics = Com.Statistics;
+using Texting = Com.Text;
+using FormManager = Com.WinForm.FormManager;
+using Theme = Com.WinForm.Theme;
+
 namespace Multibody
 {
     public partial class MainForm : Form
     {
-        private Com.WinForm.FormManager Me;
+        private FormManager Me;
 
-        public Com.WinForm.FormManager FormManager
+        public FormManager FormManager
         {
             get
             {
@@ -37,7 +48,7 @@ namespace Multibody
             }
         }
 
-        private void _Ctor(Com.WinForm.FormManager owner)
+        private void _Ctor(FormManager owner)
         {
             InitializeComponent();
 
@@ -45,11 +56,11 @@ namespace Multibody
 
             if (owner != null)
             {
-                Me = new Com.WinForm.FormManager(this, owner);
+                Me = new FormManager(this, owner);
             }
             else
             {
-                Me = new Com.WinForm.FormManager(this);
+                Me = new FormManager(this);
             }
 
             //
@@ -62,7 +73,7 @@ namespace Multibody
             _Ctor(null);
         }
 
-        public MainForm(Com.WinForm.FormManager owner)
+        public MainForm(FormManager owner)
         {
             _Ctor(owner);
         }
@@ -72,8 +83,8 @@ namespace Multibody
             Me.Caption = Application.ProductName;
             Me.ShowCaptionBarColor = false;
             Me.EnableCaptionBarTransparent = false;
-            Me.Theme = Com.WinForm.Theme.Black;
-            Me.ThemeColor = Com.ColorManipulation.GetRandomColorX();
+            Me.Theme = Theme.Black;
+            Me.ThemeColor = ColorManipulation.GetRandomColorX();
             Me.Location = new Point(0, 0);
             Me.Size = new Size(1500, 1000);
 
@@ -84,19 +95,19 @@ namespace Multibody
 
         private void Me_Loading(object sender, EventArgs e)
         {
-            int h = Com.Statistics.RandomInteger(360);
+            int h = Statistics.RandomInteger(360);
             const int s = 100;
             const int v = 70;
             const int d = 37;
             int i = 0;
 
-            _Particles.Add(new Particle(1E7, 7.815926418, new Com.PointD3D(700, 500, 4000), new Com.PointD3D(0, 0.0012, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(5E6, 6.203504909, new Com.PointD3D(780, 500, 4000), new Com.PointD3D(0, -0.0021, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E6, 3.627831679, new Com.PointD3D(440, 500, 4000), new Com.PointD3D(0, -0.0016, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(5E4, 1.336504618, new Com.PointD3D(420, 500, 4000), new Com.PointD3D(0, -0.0029, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(2E5, 2.121568836, new Com.PointD3D(1150, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E4, 0.781592642, new Com.PointD3D(1170, 500, 4000), new Com.PointD3D(0, 0.0024, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(2E4, 0.984745022, new Com.PointD3D(320, 500, 4000), new Com.PointD3D(0, 0.0017, 0), Com.ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E7, 7.815926418, new PointD3D(700, 500, 4000), new PointD3D(0, 0.0012, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(5E6, 6.203504909, new PointD3D(780, 500, 4000), new PointD3D(0, -0.0021, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E6, 3.627831679, new PointD3D(440, 500, 4000), new PointD3D(0, -0.0016, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(5E4, 1.336504618, new PointD3D(420, 500, 4000), new PointD3D(0, -0.0029, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(2E5, 2.121568836, new PointD3D(1150, 500, 4000), new PointD3D(0, 0.0017, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E4, 0.781592642, new PointD3D(1170, 500, 4000), new PointD3D(0, 0.0024, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(2E4, 0.984745022, new PointD3D(320, 500, 4000), new PointD3D(0, 0.0017, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -145,29 +156,29 @@ namespace Multibody
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        Com.PointD location = CoordinateTransform(particles[i].Location);
+                        PointD location = CoordinateTransform(particles[i].Location);
 
                         for (int j = FrameCount - 1; j >= 1; j--)
                         {
-                            Com.PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
-                            Com.PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
+                            PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
+                            PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
 
-                            if (Com.Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
+                            if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                             {
-                                Com.Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
+                                Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
                             }
                         }
                     }
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        Com.PointD location = CoordinateTransform(particles[i].Location);
+                        PointD location = CoordinateTransform(particles[i].Location);
 
-                        if (Com.Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                        if (Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
                         {
                             using (Brush Br = new SolidBrush(particles[i].Color))
                             {
-                                float r = Math.Max(1, (float)(new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
+                                float r = Math.Max(1, (float)(new PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
 
                                 Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
                             }
@@ -181,7 +192,7 @@ namespace Multibody
                         Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight));
                         Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
                         Grap.DrawString("Graphics:    " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 50));
-                        Grap.DrawString("Time:           " + Com.Text.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
+                        Grap.DrawString("Time:           " + Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
                     }
 
                     _FrameRateCounter.Update();
@@ -332,9 +343,9 @@ namespace Multibody
             }
         }
 
-        private Com.PointD CoordinateTransform(Com.PointD3D pt)
+        private PointD CoordinateTransform(PointD3D pt)
         {
-            return pt.ProjectToXY(new Com.PointD3D(Me.Width / 2, Me.Height / 2, 0), new Com.PointD(Screen.PrimaryScreen.Bounds.Size).Module);
+            return pt.ProjectToXY(new PointD3D(Me.Width / 2, Me.Height / 2, 0), new PointD(Screen.PrimaryScreen.Bounds.Size).Module);
         }
     }
 }

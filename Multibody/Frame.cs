@@ -2,7 +2,7 @@
 Copyright © 2019 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.190907-0000
+Version 1.0.0.0.DEV.191028-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using PointD3D = Com.PointD3D;
 
 namespace Multibody
 {
@@ -104,7 +106,7 @@ namespace Multibody
             {
                 for (int j = i + 1; j < _Particles.Count; j++)
                 {
-                    Com.PointD3D distance = _Particles[j].Location - _Particles[i].Location;
+                    PointD3D distance = _Particles[j].Location - _Particles[i].Location;
 
                     double distanceModule = distance.Module;
 
@@ -114,7 +116,7 @@ namespace Multibody
                         double dist = Math.Max(distanceModule, radiusSum);
                         double distSquared = dist * dist;
 
-                        Com.PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distSquared) * distance.Normalize;
+                        PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distSquared) * distance.Normalize;
 
                         if (distanceModule < radiusSum)
                         {
