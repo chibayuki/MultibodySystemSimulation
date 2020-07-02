@@ -1,8 +1,8 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2019 chibayuki@foxmail.com
+Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.191028-0000
+Version 1.0.0.0.DEV.200702-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -24,8 +24,8 @@ namespace Multibody
     {
         private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）
 
-        private double _Time;
-        private List<Particle> _Particles;
+        private double _Time; // 相对时刻（秒）
+        private List<Particle> _Particles; // 粒子列表
 
         public Frame(double time, params Particle[] particles)
         {

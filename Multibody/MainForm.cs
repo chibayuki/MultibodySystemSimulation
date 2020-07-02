@@ -1,8 +1,8 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2019 chibayuki@foxmail.com
+Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.191028-0000
+Version 1.0.0.0.DEV.200702-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -120,7 +120,7 @@ namespace Multibody
             RedrawThreadStop();
         }
 
-        List<Particle> _Particles = new List<Particle>();
+        private List<Particle> _Particles = new List<Particle>();
         private MultibodySystem _MultibodySystem = null;
 
         private FrequencyCounter _FrameRateCounter = new FrequencyCounter();

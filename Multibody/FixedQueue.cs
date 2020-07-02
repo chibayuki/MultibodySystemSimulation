@@ -1,8 +1,8 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2019 chibayuki@foxmail.com
+Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.190914-0000
+Version 1.0.0.0.DEV.200702-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -20,10 +20,10 @@ namespace Multibody
     // 通过自动弹出队首元素实现固定容量的队列
     internal sealed class FixedQueue<T>
     {
-        private int _Capacity;
-        private int _StartIndex;
-        private int _Count;
-        private T[] _TArray;
+        private int _Capacity; // 容量
+        private int _StartIndex; // 起始索引
+        private int _Count; // 元素数目
+        private T[] _TArray; // 数据数组
 
         public FixedQueue(int capacity)
         {
@@ -115,6 +115,12 @@ namespace Multibody
 
         // 获取此 _FixedQueue 对象的元素数目
         public int Count => _Count;
+
+        // 获取表示此 _FixedQueue 对象是否为空的布尔值
+        public bool IsEmpty => (_Count <= 0);
+
+        // 获取表示此 _FixedQueue 对象是否已满的布尔值
+        public bool IsFull => (_Capacity > 0 && _Count == _Capacity);
 
         // 重新设置此 _FixedQueue 对象的容量
         public void Resize(int capacity)

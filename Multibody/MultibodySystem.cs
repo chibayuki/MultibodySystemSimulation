@@ -1,8 +1,8 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2019 chibayuki@foxmail.com
+Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.190906-0000
+Version 1.0.0.0.DEV.200702-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -20,13 +20,13 @@ namespace Multibody
     // 多体系统
     internal sealed class MultibodySystem
     {
-        private double _DynamicsResolution;
-        private double _KinematicsResolution;
-        private double _CacheSize;
-        private Frame _InitialFrame;
-        private FixedQueue<Frame> _FrameHistory;
-        private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter();
-        private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter();
+        private double _DynamicsResolution; // 动力学分辨率（秒）
+        private double _KinematicsResolution; // 运动学分辨率（秒）
+        private double _CacheSize; // 缓存大小（秒）
+        private Frame _InitialFrame; // 初始帧
+        private FixedQueue<Frame> _FrameHistory; // 历史帧
+        private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器
+        private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器
 
         public MultibodySystem(double dynamicsResolution, double kinematicsResolution, double cacheSize, params Particle[] particles)
         {

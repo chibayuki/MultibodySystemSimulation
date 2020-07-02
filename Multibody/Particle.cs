@@ -1,8 +1,8 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2019 chibayuki@foxmail.com
+Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.191028-0000
+Version 1.0.0.0.DEV.200702-0000
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -24,12 +24,12 @@ namespace Multibody
     // 粒子，表示三维空间中的有体积的质点
     internal sealed class Particle
     {
-        private double _Mass;
-        private double _Radius;
-        private PointD3D _Location;
-        private PointD3D _Velocity;
-        private PointD3D _Force;
-        private Color _Color;
+        private double _Mass; // 质量（千克）
+        private double _Radius; // 半径（米）
+        private PointD3D _Location; // 位置（米）
+        private PointD3D _Velocity; // 速度（米/秒）
+        private PointD3D _Force; // 作用力（牛顿）
+        private Color _Color; // 颜色
 
         private Particle(double mass, double radius, PointD3D location, PointD3D velocity, PointD3D force, Color color)
         {
