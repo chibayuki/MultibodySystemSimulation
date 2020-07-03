@@ -39,13 +39,13 @@ namespace Multibody
         }
 
         // 获取此 MultibodySystem 对象的动力学分辨率（秒）
-        private double DynamicsResolution => _DynamicsResolution;
+        public double DynamicsResolution => _DynamicsResolution;
 
         // 获取此 MultibodySystem 对象的运动学分辨率（秒）
-        private double KinematicsResolution => _KinematicsResolution;
+        public double KinematicsResolution => _KinematicsResolution;
 
         // 获取此 MultibodySystem 对象的缓存大小（秒）
-        private double CacheSize => _CacheSize;
+        public double CacheSize => _CacheSize;
 
         // 获取此 MultibodySystem 对象的初始帧
         public Frame InitialFrame => _InitialFrame;

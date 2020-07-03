@@ -25,6 +25,19 @@ namespace Multibody
         private int _Count; // 元素数目
         private T[] _TArray; // 数据数组
 
+        // 获取实际的数组索引
+        private int _GetRealIndex(int index)
+        {
+            int _index = _StartIndex + index;
+
+            if (_index >= _Capacity)
+            {
+                return (_index - _Capacity);
+            }
+
+            return _index;
+        }
+
         public FixedQueue(int capacity)
         {
             if (capacity < 0)
@@ -52,14 +65,7 @@ namespace Multibody
 
                 //
 
-                int _index = _StartIndex + index;
-
-                if (_index >= _Capacity)
-                {
-                    _index -= _Capacity;
-                }
-
-                return _TArray[_index];
+                return _TArray[_GetRealIndex(index)];
             }
 
             set
@@ -71,14 +77,7 @@ namespace Multibody
 
                 //
 
-                int _index = _StartIndex + index;
-
-                if (_index >= _Capacity)
-                {
-                    _index -= _Capacity;
-                }
-
-                _TArray[_index] = value;
+                _TArray[_GetRealIndex(index)] = value;
             }
         }
 
@@ -149,14 +148,7 @@ namespace Multibody
 
                     for (int i = 0; i < _Count; i++)
                     {
-                        int _index = _StartIndex + i;
-
-                        if (_index >= _Capacity)
-                        {
-                            _index -= _Capacity;
-                        }
-
-                        array[i] = _TArray[_index];
+                        array[i] = _TArray[_GetRealIndex(i)];
                     }
 
                     _Capacity = capacity;
