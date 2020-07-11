@@ -23,6 +23,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Threading;
 
+using AffineTransformation = Com.AffineTransformation;
 using ColorManipulation = Com.ColorManipulation;
 using ColorX = Com.ColorX;
 using Geometry = Com.Geometry;
@@ -38,6 +39,8 @@ namespace Multibody
 {
     public partial class MainForm : Form
     {
+        #region 窗口定义
+
         private FormManager Me;
 
         public FormManager FormManager
@@ -85,13 +88,16 @@ namespace Multibody
             Me.EnableCaptionBarTransparent = false;
             Me.Theme = Theme.Black;
             Me.ThemeColor = ColorManipulation.GetRandomColorX();
-            Me.Location = new Point(0, 0);
             Me.Size = new Size(1500, 1000);
 
             Me.Loading += Me_Loading;
             Me.Loaded += Me_Loaded;
             Me.Closed += Me_Closed;
         }
+
+        #endregion
+
+        #region 窗口事件回调
 
         private void Me_Loading(object sender, EventArgs e)
         {
@@ -120,26 +126,44 @@ namespace Multibody
             RedrawThreadStop();
         }
 
-        private List<Particle> _Particles = new List<Particle>();
-        private MultibodySystem _MultibodySystem = null;
+        #endregion
 
-        private FrequencyCounter _FrameRateCounter = new FrequencyCounter();
+        #region 多体系统定义
 
-        private double _TimeMag = 100000; // 时间倍率（秒/秒）。
-        private double _DynamicsResolution = 1; // 动力学分辨率（秒）。
-        private double _KinematicsResolution = 1000; // 运动学分辨率（秒）。
-        private double _CacheSize = 1000000; // 缓存大小（秒）。
+        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
 
-        private Bitmap _MultibodyBitmap = null;
+        private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
+        private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
+        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
+        private double _CacheSize = 1000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度，表现为轨迹长度。
 
-        private void _UpdateMultibodyBitmap()
+        private MultibodySystem _MultibodySystem = null; // 多体系统。
+
+        #endregion
+
+        #region 仿射变换和视图控制
+
+        private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
+
+        private PointD CoordinateTransform(PointD3D pt)
+        {
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(new PointD3D(Panel_Main.Width / 2, Panel_Main.Height / 2, 0), new PointD(Panel_Main.Size).Module);
+        }
+
+        #endregion
+
+        #region 渲染
+
+        private Bitmap _MultibodyBitmap = null; // 多体系统当前渲染的位图。
+
+        private void UpdateMultibodyBitmap()
         {
             if (_MultibodyBitmap != null)
             {
                 _MultibodyBitmap.Dispose();
             }
 
-            _MultibodyBitmap = new Bitmap(Math.Max(1, Me.Width), Math.Max(1, Me.Height));
+            _MultibodyBitmap = new Bitmap(Math.Max(1, Panel_Main.Width), Math.Max(1, Panel_Main.Height));
 
             if (_MultibodySystem != null)
             {
@@ -200,9 +224,9 @@ namespace Multibody
             }
         }
 
-        private void _RepaintMultibodyBitmap()
+        private void RepaintMultibodyBitmap()
         {
-            _UpdateMultibodyBitmap();
+            UpdateMultibodyBitmap();
 
             if (_MultibodyBitmap != null)
             {
@@ -216,7 +240,7 @@ namespace Multibody
         {
             if (_MultibodyBitmap == null)
             {
-                _UpdateMultibodyBitmap();
+                UpdateMultibodyBitmap();
             }
 
             if (_MultibodyBitmap != null)
@@ -227,22 +251,30 @@ namespace Multibody
             }
         }
 
-        private Thread RedrawThread;
+        #endregion
+
+        #region 重绘线程和帧率控制
+
+        private Thread _RedrawThread; // 重绘线程。
+
+        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
 
         private void RedrawThreadStart()
         {
             _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
 
-            RedrawThread = new Thread(new ThreadStart(RedrawThreadEvent));
-            RedrawThread.IsBackground = true;
-            RedrawThread.Start();
+            _AffineTransformation = AffineTransformation.Empty;
+
+            _RedrawThread = new Thread(new ThreadStart(RedrawThreadEvent));
+            _RedrawThread.IsBackground = true;
+            _RedrawThread.Start();
         }
 
         private void RedrawThreadStop()
         {
-            if (RedrawThread != null && RedrawThread.IsAlive)
+            if (_RedrawThread != null && _RedrawThread.IsAlive)
             {
-                RedrawThread.Abort();
+                _RedrawThread.Abort();
             }
         }
 
@@ -266,7 +298,7 @@ namespace Multibody
 
                 Watch.Restart();
 
-                this.Invoke(new Action(_RepaintMultibodyBitmap));
+                this.Invoke(new Action(RepaintMultibodyBitmap));
 
                 Watch.Stop();
 
@@ -343,9 +375,6 @@ namespace Multibody
             }
         }
 
-        private PointD CoordinateTransform(PointD3D pt)
-        {
-            return pt.ProjectToXY(new PointD3D(Me.Width / 2, Me.Height / 2, 0), new PointD(Screen.PrimaryScreen.Bounds.Size).Module);
-        }
+        #endregion
     }
 }
