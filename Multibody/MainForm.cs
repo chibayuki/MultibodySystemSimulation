@@ -30,8 +30,10 @@ using Geometry = Com.Geometry;
 using Painting2D = Com.Painting2D;
 using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
+using PointD6D = Com.PointD6D;
 using Statistics = Com.Statistics;
 using Texting = Com.Text;
+using VectorType = Com.Vector.Type;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
 
@@ -144,10 +146,80 @@ namespace Multibody
         #region 仿射变换和视图控制
 
         private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
+        private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
 
-        private PointD CoordinateTransform(PointD3D pt)
+        // 仿射变换使用的坐标系原点（屏幕坐标系）。
+        private PointD3D AffineTransformCenter => new PointD3D(Panel_Main.Width / 2, Panel_Main.Height / 2, 0);
+
+        // 投影变换使用的焦距。
+        private double FocalLength => new PointD(Panel_Main.Size).Module;
+
+        // 视图控制开始。
+        private void ViewOperationStart()
         {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(new PointD3D(Panel_Main.Width / 2, Panel_Main.Height / 2, 0), new PointD(Panel_Main.Size).Module);
+            _AffineTransformationCopy = _AffineTransformation.Copy();
+        }
+
+        // 视图控制停止。
+        private void ViewOperationStop()
+        {
+            _AffineTransformation = AffineTransformation.FromMatrixTransform(_AffineTransformationCopy.ToMatrix(VectorType.ColumnVector, 3));
+            _AffineTransformationCopy = null;
+        }
+
+        // 视图控制更新六自由度（Δx，Δy，Δz，Rx，Ry，Rz）参数。
+        private void ViewOperationUpdateParam(PointD6D param)
+        {
+            AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
+
+            if (param.X != 0)
+            {
+                affineTransformation.Offset(0, param.X);
+            }
+
+            if (param.Y != 0)
+            {
+                affineTransformation.Offset(1, param.Y);
+            }
+
+            if (param.Z != 0)
+            {
+                affineTransformation.Offset(2, param.Z);
+            }
+
+            if (param.U != 0 || param.V != 0 || param.W != 0)
+            {
+                PointD3D center = AffineTransformCenter;
+
+                affineTransformation.Offset(0, -center.X);
+                affineTransformation.Offset(1, -center.Y);
+                affineTransformation.Offset(2, -center.Z);
+
+                if (param.U != 0)
+                {
+                    affineTransformation.Rotate(1, 2, param.U);
+                }
+                else if (param.V != 0)
+                {
+                    affineTransformation.Rotate(2, 0, param.V);
+                }
+                else
+                {
+                    affineTransformation.Rotate(0, 1, param.W);
+                }
+
+                affineTransformation.Offset(0, center.X);
+                affineTransformation.Offset(1, center.Y);
+                affineTransformation.Offset(2, center.Z);
+            }
+
+            _AffineTransformation = AffineTransformation.FromMatrixTransform(affineTransformation.ToMatrix(VectorType.ColumnVector, 3));
+        }
+
+        // 世界坐标系转换到屏幕坐标系。
+        private PointD WorldToScreen(PointD3D pt)
+        {
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(AffineTransformCenter, FocalLength);
         }
 
         #endregion
@@ -156,6 +228,7 @@ namespace Multibody
 
         private Bitmap _MultibodyBitmap = null; // 多体系统当前渲染的位图。
 
+        // 将多体系统的当前状态渲染到位图。
         private void UpdateMultibodyBitmap()
         {
             if (_MultibodyBitmap != null)
@@ -180,12 +253,12 @@ namespace Multibody
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        PointD location = CoordinateTransform(particles[i].Location);
+                        PointD location = WorldToScreen(particles[i].Location);
 
                         for (int j = FrameCount - 1; j >= 1; j--)
                         {
-                            PointD pt1 = CoordinateTransform(_MultibodySystem.Frame(j).Particles[i].Location);
-                            PointD pt2 = CoordinateTransform(_MultibodySystem.Frame(j - 1).Particles[i].Location);
+                            PointD pt1 = WorldToScreen(_MultibodySystem.Frame(j).Particles[i].Location);
+                            PointD pt2 = WorldToScreen(_MultibodySystem.Frame(j - 1).Particles[i].Location);
 
                             if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                             {
@@ -196,7 +269,7 @@ namespace Multibody
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        PointD location = CoordinateTransform(particles[i].Location);
+                        PointD location = WorldToScreen(particles[i].Location);
 
                         if (Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
                         {
@@ -213,8 +286,8 @@ namespace Multibody
                     {
                         Font ft = new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134);
 
-                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight));
-                        Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
+                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight));
+                        Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
                         Grap.DrawString("Graphics:    " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 50));
                         Grap.DrawString("Time:           " + Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
                     }
@@ -224,6 +297,7 @@ namespace Multibody
             }
         }
 
+        // 渲染位图并重绘。
         private void RepaintMultibodyBitmap()
         {
             UpdateMultibodyBitmap();
@@ -259,6 +333,7 @@ namespace Multibody
 
         private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
 
+        // 重绘线程开始。
         private void RedrawThreadStart()
         {
             _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
@@ -270,6 +345,7 @@ namespace Multibody
             _RedrawThread.Start();
         }
 
+        // 重绘线程停止。
         private void RedrawThreadStop()
         {
             if (_RedrawThread != null && _RedrawThread.IsAlive)
@@ -278,6 +354,7 @@ namespace Multibody
             }
         }
 
+        // 重绘线程执行的事件。
         private void RedrawThreadEvent()
         {
             int KCount = 1;

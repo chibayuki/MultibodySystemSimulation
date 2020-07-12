@@ -21,15 +21,15 @@ using PointD3D = Com.PointD3D;
 
 namespace Multibody
 {
-    // 粒子，表示三维空间中的有体积的质点
+    // 粒子，表示三维空间中的有体积的质点。
     internal sealed class Particle
     {
-        private double _Mass; // 质量（千克）
-        private double _Radius; // 半径（米）
-        private PointD3D _Location; // 位置（米）
-        private PointD3D _Velocity; // 速度（米/秒）
-        private PointD3D _Force; // 作用力（牛顿）
-        private Color _Color; // 颜色
+        private double _Mass; // 质量（千克）。
+        private double _Radius; // 半径（米）。
+        private PointD3D _Location; // 位置（米）。
+        private PointD3D _Velocity; // 速度（米/秒）。
+        private PointD3D _Force; // 作用力（牛顿）。
+        private Color _Color; // 颜色。
 
         private Particle(double mass, double radius, PointD3D location, PointD3D velocity, PointD3D force, Color color)
         {
@@ -52,34 +52,34 @@ namespace Multibody
         {
         }
 
-        // 获取此 Particle 对象的质量（千克）
+        // 获取此 Particle 对象的质量（千克）。
         public double Mass => _Mass;
 
-        // 获取此 Particle 对象的半径（米）
+        // 获取此 Particle 对象的半径（米）。
         public double Radius => _Radius;
 
-        // 获取此 Particle 对象的密度（千克/立方米）
-        private double Density => _Mass * 3 / (4 * Math.PI) / (_Radius * _Radius * _Radius);
+        // 获取此 Particle 对象的密度（千克/立方米）。
+        private double Density => _Mass * 0.75 / Math.PI / (_Radius * _Radius * _Radius);
 
-        // 获取此 Particle 对象的位置（米）
+        // 获取此 Particle 对象的位置（米）。
         public PointD3D Location => _Location;
 
-        // 获取此 Particle 对象的速度（米/秒）
+        // 获取此 Particle 对象的速度（米/秒）。
         public PointD3D Velocity => _Velocity;
 
-        // 获取此 Particle 对象的加速度（米/平方秒）
+        // 获取此 Particle 对象的加速度（米/平方秒）。
         public PointD3D Acceleration => _Force / _Mass;
 
-        // 获取此 Particle 对象的颜色
+        // 获取此 Particle 对象的颜色。
         public Color Color => _Color;
 
-        // 返回此 Particle 对象的副本
+        // 返回此 Particle 对象的副本。
         public Particle Copy()
         {
             return new Particle(_Mass, _Radius, _Location, _Velocity, _Force, _Color);
         }
 
-        // 将此 Particle 对象运动指定的时长（秒）
+        // 将此 Particle 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
@@ -95,7 +95,7 @@ namespace Multibody
             _Velocity += acceleration * seconds;
         }
 
-        // 在此 Particle 对象上施加一个作用力（牛顿）
+        // 在此 Particle 对象上施加一个作用力（牛顿）。
         public void AddForce(PointD3D force)
         {
             if (force.IsNaNOrInfinity)
@@ -108,7 +108,7 @@ namespace Multibody
             _Force += force;
         }
 
-        // 在此 Particle 对象上施加若干个作用力（牛顿）
+        // 在此 Particle 对象上施加若干个作用力（牛顿）。
         public void AddForce(params PointD3D[] forces)
         {
             foreach (PointD3D force in forces)
@@ -127,7 +127,7 @@ namespace Multibody
             }
         }
 
-        // 移除在此 Particle 对象上施加的所有作用力
+        // 移除在此 Particle 对象上施加的所有作用力。
         public void RemoveForce()
         {
             _Force = PointD3D.Zero;

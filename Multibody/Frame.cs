@@ -19,13 +19,13 @@ using PointD3D = Com.PointD3D;
 
 namespace Multibody
 {
-    // 帧，表示若干粒子的瞬时状态
+    // 帧，表示若干粒子的瞬时状态。
     internal sealed class Frame
     {
-        private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）
+        private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）。
 
-        private double _Time; // 相对时刻（秒）
-        private List<Particle> _Particles; // 粒子列表
+        private double _Time; // 相对时刻（秒）。
+        private List<Particle> _Particles; // 粒子列表。
 
         public Frame(double time, params Particle[] particles)
         {
@@ -73,19 +73,19 @@ namespace Multibody
             }
         }
 
-        // 获取此 Frame 对象的相对时刻（秒）
+        // 获取此 Frame 对象的相对时刻（秒）。
         public double Time => _Time;
 
-        // 获取此 Frame 对象的所有粒子
+        // 获取此 Frame 对象的所有粒子。
         public List<Particle> Particles => _Particles;
 
-        // 获取此 Frame 对象的副本
+        // 获取此 Frame 对象的副本。
         public Frame Copy()
         {
             return new Frame(_Time, _Particles);
         }
 
-        // 将此 Frame 对象运动指定的时长（秒）
+        // 将此 Frame 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)

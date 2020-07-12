@@ -17,14 +17,14 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
-    // 频率计数器，用于实时计算在过去一小段时间间隔内某一事件发生的平均频率
+    // 频率计数器，用于实时计算在过去一小段时间间隔内某一事件发生的平均频率。
     internal sealed class FrequencyCounter
     {
-        // 表示携带计数的计时周期数
+        // 表示携带计数的计时周期数。
         private sealed class _TicksWithCount
         {
-            private long _Ticks; // 计时周期数
-            private long _Count; // 计数
+            private long _Ticks; // 计时周期数。
+            private long _Count; // 计数。
 
             public _TicksWithCount(long ticks, int count)
             {
@@ -43,7 +43,7 @@ namespace Multibody
             {
             }
 
-            // 获取或设置此 _TicksWithCount 对象的计时周期数
+            // 获取或设置此 _TicksWithCount 对象的计时周期数。
             public long Ticks
             {
                 get
@@ -57,7 +57,7 @@ namespace Multibody
                 }
             }
 
-            // 获取或设置此 _TicksWithCount 对象的计数
+            // 获取或设置此 _TicksWithCount 对象的计数。
             public long Count
             {
                 get
@@ -72,10 +72,10 @@ namespace Multibody
             }
         }
 
-        private const double _TicksPerSecond = 1E7; // 每秒的计时周期数
+        private const double _TicksPerSecond = 1E7; // 每秒的计时周期数。
 
-        private long _DeltaTTicks; // ΔT 的计时周期数
-        private FixedQueue<_TicksWithCount> _TicksHistory; // 历史计时计数
+        private long _DeltaTTicks; // ΔT 的计时周期数。
+        private FixedQueue<_TicksWithCount> _TicksHistory; // 历史计时计数。
 
         public FrequencyCounter(double deltaTSeconds)
         {
@@ -94,7 +94,7 @@ namespace Multibody
         {
         }
 
-        // 获取此 FrequencyCounter 对象的频率（赫兹）
+        // 获取此 FrequencyCounter 对象的频率（赫兹）。
         public double Frequency
         {
             get
@@ -143,10 +143,10 @@ namespace Multibody
             }
         }
 
-        // 获取此 FrequencyCounter 对象的周期（秒）
+        // 获取此 FrequencyCounter 对象的周期（秒）。
         public double Period => 1 / Frequency;
 
-        // 更新此 FrequencyCounter 对象指定次计数
+        // 更新此 FrequencyCounter 对象指定次计数。
         public void Update(int count)
         {
             if (count <= 0)
@@ -191,13 +191,13 @@ namespace Multibody
             }
         }
 
-        // 更新此 FrequencyCounter 对象一次计数
+        // 更新此 FrequencyCounter 对象一次计数。
         public void Update()
         {
             Update(1);
         }
 
-        // 重置此 FrequencyCounter 对象
+        // 重置此 FrequencyCounter 对象。
         public void Reset()
         {
             _TicksHistory.Clear();

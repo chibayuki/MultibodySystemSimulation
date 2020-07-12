@@ -17,16 +17,16 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
-    // 多体系统
+    // 多体系统。
     internal sealed class MultibodySystem
     {
-        private double _DynamicsResolution; // 动力学分辨率（秒）
-        private double _KinematicsResolution; // 运动学分辨率（秒）
-        private double _CacheSize; // 缓存大小（秒）
-        private Frame _InitialFrame; // 初始帧
-        private FixedQueue<Frame> _FrameHistory; // 历史帧
-        private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器
-        private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器
+        private double _DynamicsResolution; // 动力学分辨率（秒）。
+        private double _KinematicsResolution; // 运动学分辨率（秒）。
+        private double _CacheSize; // 缓存大小（秒）。
+        private Frame _InitialFrame; // 初始帧。
+        private FixedQueue<Frame> _FrameHistory; // 历史帧。
+        private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器。
+        private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器。
 
         public MultibodySystem(double dynamicsResolution, double kinematicsResolution, double cacheSize, params Particle[] particles)
         {
@@ -38,40 +38,40 @@ namespace Multibody
             Reset(dynamicsResolution, kinematicsResolution, cacheSize, particles);
         }
 
-        // 获取此 MultibodySystem 对象的动力学分辨率（秒）
+        // 获取此 MultibodySystem 对象的动力学分辨率（秒）。
         public double DynamicsResolution => _DynamicsResolution;
 
-        // 获取此 MultibodySystem 对象的运动学分辨率（秒）
+        // 获取此 MultibodySystem 对象的运动学分辨率（秒）。
         public double KinematicsResolution => _KinematicsResolution;
 
-        // 获取此 MultibodySystem 对象的缓存大小（秒）
+        // 获取此 MultibodySystem 对象的缓存大小（秒）。
         public double CacheSize => _CacheSize;
 
-        // 获取此 MultibodySystem 对象的初始帧
+        // 获取此 MultibodySystem 对象的初始帧。
         public Frame InitialFrame => _InitialFrame;
 
-        // 获取此 MultibodySystem 对象的最新一帧
+        // 获取此 MultibodySystem 对象的最新一帧。
         public Frame LatestFrame => _FrameHistory.Tail;
 
-        // 获取此 MultibodySystem 对象的帧容量
+        // 获取此 MultibodySystem 对象的帧容量。
         public int FrameCapacity => _FrameHistory.Capacity;
 
-        // 获取此 MultibodySystem 对象的总帧数
+        // 获取此 MultibodySystem 对象的总帧数。
         public int FrameCount => _FrameHistory.Count;
 
-        // 获取此 MultibodySystem 对象的动力学频率计数器
+        // 获取此 MultibodySystem 对象的动力学频率计数器。
         public FrequencyCounter DynamicFrequencyCounter => _DynamicsFrequencyCounter;
 
-        // 获取此 MultibodySystem 对象的运动学频率计数器
+        // 获取此 MultibodySystem 对象的运动学频率计数器。
         public FrequencyCounter KinematicsFrequencyCounter => _KinematicsFrequencyCounter;
 
-        // 获取此 MultibodySystem 对象的指定帧
+        // 获取此 MultibodySystem 对象的指定帧。
         public Frame Frame(int index)
         {
             return _FrameHistory[index];
         }
 
-        // 将此 MultibodySystem 对象运动指定的时长（秒）
+        // 将此 MultibodySystem 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < _KinematicsResolution)
@@ -119,7 +119,7 @@ namespace Multibody
             }
         }
 
-        // 将此 MultibodySystem 对象运动与轨迹分辨率相同的时长
+        // 将此 MultibodySystem 对象运动与轨迹分辨率相同的时长。
         public void NextMoment()
         {
             int countD = (int)Math.Round(_KinematicsResolution / _DynamicsResolution);
@@ -147,7 +147,7 @@ namespace Multibody
             _KinematicsFrequencyCounter.Update();
         }
 
-        // 将此 MultibodySystem 对象回到初始帧
+        // 将此 MultibodySystem 对象回到初始帧。
         public void Restart()
         {
             _FrameHistory.Clear();
@@ -156,7 +156,7 @@ namespace Multibody
             _KinematicsFrequencyCounter.Reset();
         }
 
-        // 重新设置此 MultibodySystem 对象的参数与所有粒子
+        // 重新设置此 MultibodySystem 对象的参数与所有粒子。
         public void Reset(double dynamicsResolution, double kinematicsResolution, double cacheSize, params Particle[] particles)
         {
             if (double.IsNaN(dynamicsResolution) || double.IsInfinity(dynamicsResolution) || dynamicsResolution <= 0)
@@ -189,7 +189,7 @@ namespace Multibody
             _FrameHistory.Enqueue(_InitialFrame.Copy());
         }
 
-        // 重新设置此 MultibodySystem 对象的参数与所有粒子
+        // 重新设置此 MultibodySystem 对象的参数与所有粒子。
         public void Reset(double dynamicsResolution, double kinematicsResolution, double cacheSize, List<Particle> particles)
         {
             if (double.IsNaN(dynamicsResolution) || double.IsInfinity(dynamicsResolution) || dynamicsResolution <= 0)

@@ -17,15 +17,15 @@ using System.Threading.Tasks;
 
 namespace Multibody
 {
-    // 通过自动弹出队首元素实现固定容量的队列
+    // 通过自动弹出队首元素实现固定容量的队列。
     internal sealed class FixedQueue<T>
     {
-        private int _Capacity; // 容量
-        private int _StartIndex; // 起始索引
-        private int _Count; // 元素数目
-        private T[] _TArray; // 数据数组
+        private int _Capacity; // 容量。
+        private int _StartIndex; // 起始索引。
+        private int _Count; // 元素数目。
+        private T[] _TArray; // 数据数组。
 
-        // 获取实际的数组索引
+        // 获取实际的数组索引。
         private int _GetRealIndex(int index)
         {
             int _index = _StartIndex + index;
@@ -53,7 +53,7 @@ namespace Multibody
             _TArray = new T[_Capacity];
         }
 
-        // 获取或设置此 _FixedQueue 对象的指定索引的元素
+        // 获取或设置此 _FixedQueue 对象的指定索引的元素。
         public T this[int index]
         {
             get
@@ -81,7 +81,7 @@ namespace Multibody
             }
         }
 
-        // 获取或设置此 _FixedQueue 对象的队首元素
+        // 获取或设置此 _FixedQueue 对象的队首元素。
         public T Head
         {
             get
@@ -95,7 +95,7 @@ namespace Multibody
             }
         }
 
-        // 获取或设置此 _FixedQueue 对象的队尾元素
+        // 获取或设置此 _FixedQueue 对象的队尾元素。
         public T Tail
         {
             get
@@ -109,19 +109,19 @@ namespace Multibody
             }
         }
 
-        // 获取此 _FixedQueue 对象的容量
+        // 获取此 _FixedQueue 对象的容量。
         public int Capacity => _Capacity;
 
-        // 获取此 _FixedQueue 对象的元素数目
+        // 获取此 _FixedQueue 对象的元素数目。
         public int Count => _Count;
 
-        // 获取表示此 _FixedQueue 对象是否为空的布尔值
+        // 获取表示此 _FixedQueue 对象是否为空的布尔值。
         public bool IsEmpty => (_Count <= 0);
 
-        // 获取表示此 _FixedQueue 对象是否已满的布尔值
+        // 获取表示此 _FixedQueue 对象是否已满的布尔值。
         public bool IsFull => (_Capacity > 0 && _Count == _Capacity);
 
-        // 重新设置此 _FixedQueue 对象的容量
+        // 重新设置此 _FixedQueue 对象的容量。
         public void Resize(int capacity)
         {
             if (capacity < 0)
@@ -158,7 +158,7 @@ namespace Multibody
             }
         }
 
-        // 向此 _FixedQueue 对象的队尾添加一个元素
+        // 向此 _FixedQueue 对象的队尾添加一个元素。
         public void Enqueue(T item)
         {
             if (_Count < _Capacity)
@@ -177,7 +177,7 @@ namespace Multibody
             this[_Count - 1] = item;
         }
 
-        // 从此 _FixedQueue 对象的队首取出一个元素
+        // 从此 _FixedQueue 对象的队首取出一个元素。
         public T Dequeue()
         {
             T result = this[0];
@@ -194,7 +194,7 @@ namespace Multibody
             return result;
         }
 
-        // 删除此 _FixedQueue 对象的所有元素
+        // 删除此 _FixedQueue 对象的所有元素。
         public void Clear()
         {
             _StartIndex = 0;
