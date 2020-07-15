@@ -15,6 +15,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using FrequencyCounter = Com.FrequencyCounter;
+
 namespace Multibody
 {
     // 多体系统。
@@ -24,7 +26,7 @@ namespace Multibody
         private double _KinematicsResolution; // 运动学分辨率（秒）。
         private double _CacheSize; // 缓存大小（秒）。
         private Frame _InitialFrame; // 初始帧。
-        private FixedQueue<Frame> _FrameHistory; // 历史帧。
+        private Com.FixedQueue<Frame> _FrameHistory; // 历史帧队列。
         private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器。
         private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器。
 
@@ -185,7 +187,7 @@ namespace Multibody
             _KinematicsResolution = kinematicsResolution;
             _CacheSize = cacheSize;
             _InitialFrame = new Frame(0, particles);
-            _FrameHistory = new FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
+            _FrameHistory = new Com.FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
             _FrameHistory.Enqueue(_InitialFrame.Copy());
         }
 
@@ -218,7 +220,7 @@ namespace Multibody
             _KinematicsResolution = kinematicsResolution;
             _CacheSize = cacheSize;
             _InitialFrame = new Frame(0, particles);
-            _FrameHistory = new FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
+            _FrameHistory = new Com.FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
             _FrameHistory.Enqueue(_InitialFrame.Copy());
         }
     }

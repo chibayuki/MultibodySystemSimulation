@@ -26,6 +26,7 @@ using System.Threading;
 using AffineTransformation = Com.AffineTransformation;
 using ColorManipulation = Com.ColorManipulation;
 using ColorX = Com.ColorX;
+using FrequencyCounter = Com.FrequencyCounter;
 using Geometry = Com.Geometry;
 using Painting2D = Com.Painting2D;
 using PointD = Com.PointD;
@@ -109,9 +110,9 @@ namespace Multibody
             const int s = 100;
             const int v = 70;
             const int d = 37;
-            /*int i = 0;
+            int i = 0;
 
-            _Particles.Add(new Particle(1E7, 7.815926418, new PointD3D(700, 500, 4000), new PointD3D(0, 0.0012, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            /*_Particles.Add(new Particle(1E7, 7.815926418, new PointD3D(700, 500, 4000), new PointD3D(0, 0.0012, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
             _Particles.Add(new Particle(5E6, 6.203504909, new PointD3D(780, 500, 4000), new PointD3D(0, -0.0021, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
             _Particles.Add(new Particle(1E6, 3.627831679, new PointD3D(440, 500, 4000), new PointD3D(0, -0.0016, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
             _Particles.Add(new Particle(5E4, 1.336504618, new PointD3D(420, 500, 4000), new PointD3D(0, -0.0029, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
@@ -119,10 +120,14 @@ namespace Multibody
             _Particles.Add(new Particle(1E4, 0.781592642, new PointD3D(1170, 500, 4000), new PointD3D(0, 0.0024, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
             _Particles.Add(new Particle(2E4, 0.984745022, new PointD3D(320, 500, 4000), new PointD3D(0, 0.0017, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));*/
 
-            for (int i = 0; i < 10; i++)
+            /*for (int i = 0; i < 10; i++)
             {
                 _Particles.Add(new Particle(Statistics.RandomDouble(2E5, 5E6), Statistics.RandomDouble(2, 5), new PointD3D(Statistics.RandomDouble(200, 1000), Statistics.RandomDouble(200, 600), Statistics.RandomDouble(-1000, 1000)), new PointD3D(Statistics.RandomDouble(0.0005, 0.001), Statistics.RandomDouble(2 * Math.PI), Statistics.RandomDouble(2 * Math.PI)).ToCartesian(), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            }
+            }*/
+
+            _Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -177,13 +182,13 @@ namespace Multibody
         {
             Panel_SideBar.Height = Panel_Main.Height;
             Panel_SideBar.Left = Panel_Main.Width - Panel_SideBar.Width;
+
+            Panel_View.Size = Panel_Main.Size;
         }
 
         private void Me_SizeChanged(object sender, EventArgs e)
         {
             Me.OnResize();
-
-            Panel_View.Size = Panel_Main.Size;
         }
 
         private void Me_ThemeChanged(object sender, EventArgs e)
@@ -200,32 +205,32 @@ namespace Multibody
 
         #endregion
 
-        #region 多体系统定义
-
-        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
+        #region 粒子和多体系统定义
 
         private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
         private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
-        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
         private double _CacheSize = 1000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度，表现为轨迹长度。
 
+        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
+
+        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
         private MultibodySystem _MultibodySystem = null; // 多体系统。
 
         #endregion
 
-        #region 仿射变换和视图控制
+        #region 仿射、投影和视图控制
 
         private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
         private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
 
-        // 仿射变换使用的坐标系原点（屏幕坐标系）。
-        private PointD3D AffineTransformCenter => new PointD3D(Panel_View.Width / 2, Panel_View.Height / 2, 0);
-
-        // 仿射变换使用的坐标系原点（屏幕坐标系）。
-        private PointD3D ProjectCenter => new PointD3D(Panel_View.Width / 2, Panel_View.Height / 2, 0);
+        private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
 
         // 投影变换使用的焦距。
-        private double FocalLength => new PointD(Panel_View.Size).Module;
+        //private double FocalLength => new PointD(Screen.PrimaryScreen.Bounds.Size).Module;
+        private double FocalLength => 1000;
+
+        // 视图中心（屏幕坐标系）。
+        private PointD ViewCenter => new PointD(Panel_View.Width / 2, Panel_View.Height / 2);
 
         // 视图控制开始。
         private void ViewOperationStart()
@@ -268,22 +273,12 @@ namespace Multibody
                 }
                 else
                 {
-                    PointD3D center = AffineTransformCenter;
-
-                    affineTransformation.Offset(0, -center.X);
-                    affineTransformation.Offset(1, -center.Y);
-                    affineTransformation.Offset(2, -center.Z);
-
                     switch (type)
                     {
                         case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
                         case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
                         case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
                     }
-
-                    affineTransformation.Offset(0, center.X);
-                    affineTransformation.Offset(1, center.Y);
-                    affineTransformation.Offset(2, center.Z);
                 }
 
                 _AffineTransformation = AffineTransformation.FromMatrixTransform(affineTransformation.ToMatrix(VectorType.ColumnVector, 3));
@@ -293,7 +288,7 @@ namespace Multibody
         // 世界坐标系转换到屏幕坐标系。
         private PointD WorldToScreen(PointD3D pt)
         {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(ProjectCenter, FocalLength);
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(ViewCenter);
         }
 
         private const double _ShiftPerPixel = 1; // 每像素的偏移量。
@@ -448,13 +443,13 @@ namespace Multibody
                     {
                         PointD location = WorldToScreen(particles[i].Location);
 
-                        if (Geometry.PointIsVisibleInRectangle(location, bitmapBounds))
+                        float radius = Math.Max(1, (float)(particles[i].Radius * FocalLength / particles[i].Location.Z));
+
+                        if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                         {
                             using (Brush Br = new SolidBrush(particles[i].Color))
                             {
-                                float r = Math.Max(1, (float)(new PointD(Screen.PrimaryScreen.Bounds.Size).Module * particles[i].Radius / particles[i].Location.Z));
-
-                                Grap.FillEllipse(Br, new RectangleF((float)location.X - r, (float)location.Y - r, r * 2, r * 2));
+                                Grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
                             }
                         }
                     }
@@ -548,7 +543,7 @@ namespace Multibody
 
                 Watch.Stop();
 
-                double KSec = Math.Max(0.000001, Watch.ElapsedMilliseconds * 0.001) / KCount;
+                double KSecEachActual = Math.Max(0.000001, Watch.ElapsedMilliseconds * 0.001) / KCount;
 
                 Watch.Restart();
 
@@ -556,7 +551,7 @@ namespace Multibody
 
                 Watch.Stop();
 
-                double GSec = Math.Max(0.001, Watch.ElapsedMilliseconds * 0.001);
+                double GSecEachActual = Math.Max(0.001, Watch.ElapsedMilliseconds * 0.001);
 
                 double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
 
@@ -568,18 +563,18 @@ namespace Multibody
                     if (DFpsRatio > 1.1 || DFpsRatio < 0.9)
                     {
                         double KFpsExpect = _TimeMag / _KinematicsResolution;
-                        double KTime = KFpsExpect * KSec;
-                        double GFpsExpect = Math.Min(KFpsExpect, (1 - KTime) / GSec);
+                        double KSecTotalExpect = KFpsExpect * KSecEachActual;
+                        double GFpsExpect = Math.Min(KFpsExpect, (1 - KSecTotalExpect) / GSecEachActual);
 
                         if (GFpsExpect > 0)
                         {
-                            double GTime = GFpsExpect * GSec;
-                            double SleepTime = 1 - KTime - GTime;
+                            double GSecTotalExpect = GFpsExpect * GSecEachActual;
+                            double SleepSecExpect = 1 - KSecTotalExpect - GSecTotalExpect;
 
-                            if (SleepTime > 0.001)
+                            if (SleepSecExpect > 0.001)
                             {
                                 KCount = 1;
-                                SleepMS = (int)Math.Round(SleepTime * 1000 / GFpsExpect);
+                                SleepMS = (int)Math.Round(SleepSecExpect * 1000 / GFpsExpect);
                             }
                             else
                             {
