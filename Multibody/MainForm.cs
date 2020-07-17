@@ -170,6 +170,11 @@ namespace Multibody
             Label_RotateY.MouseMove += Label_RotateY_MouseMove;
             Label_RotateZ.MouseMove += Label_RotateZ_MouseMove;
 
+            Panel_View.MouseDown += Panel_View_MouseDown;
+            Panel_View.MouseUp += Panel_View_MouseUp;
+            Panel_View.MouseMove += Panel_View_MouseMove;
+            Panel_View.MouseWheel += Panel_View_MouseWheel;
+
             RedrawThreadStart();
         }
 
@@ -223,13 +228,11 @@ namespace Multibody
         private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
         private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
 
+        private double _FocalLength = 1000; // 投影变换使用的焦距。
+
         private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
 
-        // 投影变换使用的焦距。
-        //private double FocalLength => new PointD(Screen.PrimaryScreen.Bounds.Size).Module;
-        private double FocalLength => 1000;
-
-        // 视图中心（屏幕坐标系）。
+        // 视图中心。
         private PointD ViewCenter => new PointD(Panel_View.Width / 2, Panel_View.Height / 2);
 
         // 视图控制开始。
@@ -281,20 +284,59 @@ namespace Multibody
                     }
                 }
 
-                _AffineTransformation = AffineTransformation.FromMatrixTransform(affineTransformation.ToMatrix(VectorType.ColumnVector, 3));
+                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
+            }
+        }
+
+        // 视图控制更新参数。
+        private void ViewOperationUpdateParam(params (ViewOperationType type, double value)[] param)
+        {
+            if (param != null && param.Length > 0)
+            {
+                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
+
+                for (int i = 0; i < param.Length; i++)
+                {
+                    ViewOperationType type = param[i].type;
+                    double value = param[i].value;
+
+                    if (value != 0)
+                    {
+                        if (type <= ViewOperationType.OffsetZ)
+                        {
+                            switch (type)
+                            {
+                                case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
+                                case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
+                                case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
+                            }
+                        }
+                        else
+                        {
+                            switch (type)
+                            {
+                                case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
+                                case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
+                                case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
+                            }
+                        }
+                    }
+                }
+
+                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
             }
         }
 
         // 世界坐标系转换到屏幕坐标系。
         private PointD WorldToScreen(PointD3D pt)
         {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(ViewCenter);
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(ViewCenter);
         }
 
-        private const double _ShiftPerPixel = 1; // 每像素的偏移量。
-        private const double _RadPerPixel = Math.PI / 180; // 每像素的旋转弧度。
+        private const double _ShiftPerPixel = 1; // 每像素的偏移量（像素）。
+        private const double _RadPerPixel = Math.PI / 180; // 每像素的旋转角度（弧度）。
 
-        private int _CursorX = 0; // 鼠标指针 X 坐标。
+        private Point _CursorLocation; // 鼠标指针位置。
         private bool _AdjustNow = false; // 是否正在调整。
 
         private void Label_ViewOperation_MouseEnter(object sender, EventArgs e)
@@ -316,7 +358,7 @@ namespace Multibody
 
                 ViewOperationStart();
 
-                _CursorX = e.X;
+                _CursorLocation = e.Location;
                 _AdjustNow = true;
             }
         }
@@ -338,7 +380,7 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorX) * _ShiftPerPixel;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
 
                 ViewOperationUpdateParam(ViewOperationType.OffsetX, off);
             }
@@ -348,7 +390,7 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorX) * _ShiftPerPixel;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
 
                 ViewOperationUpdateParam(ViewOperationType.OffsetY, off);
             }
@@ -358,7 +400,7 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorX) * _ShiftPerPixel;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
 
                 ViewOperationUpdateParam(ViewOperationType.OffsetZ, off);
             }
@@ -368,7 +410,7 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double rot = (e.X - _CursorX) * _RadPerPixel;
+                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
                 ViewOperationUpdateParam(ViewOperationType.RotateX, rot);
             }
@@ -378,7 +420,7 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double rot = (e.X - _CursorX) * _RadPerPixel;
+                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
                 ViewOperationUpdateParam(ViewOperationType.RotateY, rot);
             }
@@ -388,9 +430,57 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double rot = (e.X - _CursorX) * _RadPerPixel;
+                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
                 ViewOperationUpdateParam(ViewOperationType.RotateZ, rot);
+            }
+        }
+
+        private void Panel_View_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ViewOperationStart();
+
+                _CursorLocation = e.Location;
+                _AdjustNow = true;
+            }
+        }
+
+        private void Panel_View_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _AdjustNow = false;
+
+                ViewOperationStop();
+            }
+        }
+
+        private void Panel_View_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_AdjustNow)
+            {
+                PointD off = new PointD((e.X - _CursorLocation.X) * _SpaceMag, (e.Y - _CursorLocation.Y) * _SpaceMag);
+
+                ViewOperationUpdateParam((ViewOperationType.OffsetX, off.X), (ViewOperationType.OffsetY, off.Y));
+            }
+        }
+
+        private void Panel_View_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (!_AdjustNow)
+            {
+                double off = _SpaceMag;
+
+                if (e.Delta > 0)
+                {
+                    off = -off;
+                }
+
+                ViewOperationStart();
+                ViewOperationUpdateParam(ViewOperationType.OffsetZ, off);
+                ViewOperationStop();
             }
         }
 
@@ -443,7 +533,7 @@ namespace Multibody
                     {
                         PointD location = WorldToScreen(particles[i].Location);
 
-                        float radius = Math.Max(1, (float)(particles[i].Radius * FocalLength / particles[i].Location.Z));
+                        float radius = Math.Max(1, (float)(particles[i].Radius * _FocalLength / particles[i].Location.Z));
 
                         if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                         {
