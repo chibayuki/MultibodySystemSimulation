@@ -112,22 +112,11 @@ namespace Multibody
             const int d = 37;
             int i = 0;
 
-            /*_Particles.Add(new Particle(1E7, 7.815926418, new PointD3D(700, 500, 4000), new PointD3D(0, 0.0012, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(5E6, 6.203504909, new PointD3D(780, 500, 4000), new PointD3D(0, -0.0021, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E6, 3.627831679, new PointD3D(440, 500, 4000), new PointD3D(0, -0.0016, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(5E4, 1.336504618, new PointD3D(420, 500, 4000), new PointD3D(0, -0.0029, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(2E5, 2.121568836, new PointD3D(1150, 500, 4000), new PointD3D(0, 0.0017, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E4, 0.781592642, new PointD3D(1170, 500, 4000), new PointD3D(0, 0.0024, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(2E4, 0.984745022, new PointD3D(320, 500, 4000), new PointD3D(0, 0.0017, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));*/
+            _Simulation = new Simulation(Panel_View, RepaintMultibodyBitmap, ViewCenter, ViewSize);
 
-            /*for (int i = 0; i < 10; i++)
-            {
-                _Particles.Add(new Particle(Statistics.RandomDouble(2E5, 5E6), Statistics.RandomDouble(2, 5), new PointD3D(Statistics.RandomDouble(200, 1000), Statistics.RandomDouble(200, 600), Statistics.RandomDouble(-1000, 1000)), new PointD3D(Statistics.RandomDouble(0.0005, 0.001), Statistics.RandomDouble(2 * Math.PI), Statistics.RandomDouble(2 * Math.PI)).ToCartesian(), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            }*/
-
-            _Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Simulation.Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Simulation.Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Simulation.Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
         }
 
         private void Me_Loaded(object sender, EventArgs e)
@@ -175,12 +164,12 @@ namespace Multibody
             Panel_View.MouseMove += Panel_View_MouseMove;
             Panel_View.MouseWheel += Panel_View_MouseWheel;
 
-            RedrawThreadStart();
+            _Simulation.RedrawThreadStart();
         }
 
         private void Me_Closed(object sender, EventArgs e)
         {
-            RedrawThreadStop();
+            _Simulation.RedrawThreadStop();
         }
 
         private void Me_Resize(object sender, EventArgs e)
@@ -212,125 +201,22 @@ namespace Multibody
 
         #region 粒子和多体系统定义
 
-        private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
-        private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
-        private double _CacheSize = 1000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度，表现为轨迹长度。
-
-        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
-
-        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
-        private MultibodySystem _MultibodySystem = null; // 多体系统。
+        private Simulation _Simulation; // 仿真对象。
 
         #endregion
 
-        #region 仿射、投影和视图控制
-
-        private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
-        private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
-
-        private double _FocalLength = 1000; // 投影变换使用的焦距。
-
-        private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
+        #region 视图控制
 
         // 视图中心。
-        private PointD ViewCenter => new PointD(Panel_View.Width / 2, Panel_View.Height / 2);
-
-        // 视图控制开始。
-        private void ViewOperationStart()
+        private Point ViewCenter()
         {
-            _AffineTransformationCopy = _AffineTransformation.Copy();
+            return new Point(Panel_View.Width / 2, Panel_View.Height / 2);
         }
 
-        // 视图控制停止。
-        private void ViewOperationStop()
+        // 视图中心。
+        private Size ViewSize()
         {
-            _AffineTransformationCopy = null;
-        }
-
-        // 视图控制类型。
-        private enum ViewOperationType
-        {
-            OffsetX,
-            OffsetY,
-            OffsetZ,
-            RotateX,
-            RotateY,
-            RotateZ
-        }
-
-        // 视图控制更新参数。
-        private void ViewOperationUpdateParam(ViewOperationType type, double value)
-        {
-            if (value != 0)
-            {
-                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
-
-                if (type <= ViewOperationType.OffsetZ)
-                {
-                    switch (type)
-                    {
-                        case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
-                        case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
-                        case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
-                    }
-                }
-                else
-                {
-                    switch (type)
-                    {
-                        case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
-                        case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
-                        case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
-                    }
-                }
-
-                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
-            }
-        }
-
-        // 视图控制更新参数。
-        private void ViewOperationUpdateParam(params (ViewOperationType type, double value)[] param)
-        {
-            if (param != null && param.Length > 0)
-            {
-                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
-
-                for (int i = 0; i < param.Length; i++)
-                {
-                    ViewOperationType type = param[i].type;
-                    double value = param[i].value;
-
-                    if (value != 0)
-                    {
-                        if (type <= ViewOperationType.OffsetZ)
-                        {
-                            switch (type)
-                            {
-                                case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
-                                case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
-                                case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
-                            }
-                        }
-                        else
-                        {
-                            switch (type)
-                            {
-                                case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
-                                case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
-                                case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
-                            }
-                        }
-                    }
-                }
-
-                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
-            }
-        }
-
-        // 世界坐标系转换到屏幕坐标系。
-        private PointD WorldToScreen(PointD3D pt)
-        {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(ViewCenter);
+            return new Size(Panel_View.Width, Me.CaptionBarHeight + Panel_View.Height);
         }
 
         private const double _ShiftPerPixel = 1; // 每像素的偏移量（像素）。
@@ -356,7 +242,7 @@ namespace Multibody
                 ((Label)sender).BackColor = Me.RecommendColors.Button_INC.ToColor();
                 ((Label)sender).Cursor = Cursors.SizeWE;
 
-                ViewOperationStart();
+                _Simulation.ViewOperationStart();
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -369,7 +255,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                ViewOperationStop();
+                _Simulation.ViewOperationStop();
 
                 ((Label)sender).BackColor = (Geometry.CursorIsInControl((Label)sender) ? Me.RecommendColors.Button_DEC.ToColor() : Me.RecommendColors.Background_INC.ToColor());
                 ((Label)sender).Cursor = Cursors.Default;
@@ -380,9 +266,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                ViewOperationUpdateParam(ViewOperationType.OffsetX, off);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetX, off);
             }
         }
 
@@ -390,9 +276,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                ViewOperationUpdateParam(ViewOperationType.OffsetY, off);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetY, off);
             }
         }
 
@@ -400,9 +286,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                ViewOperationUpdateParam(ViewOperationType.OffsetZ, off);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetZ, off);
             }
         }
 
@@ -412,7 +298,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                ViewOperationUpdateParam(ViewOperationType.RotateX, rot);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateX, rot);
             }
         }
 
@@ -422,7 +308,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                ViewOperationUpdateParam(ViewOperationType.RotateY, rot);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateY, rot);
             }
         }
 
@@ -432,7 +318,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                ViewOperationUpdateParam(ViewOperationType.RotateZ, rot);
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateZ, rot);
             }
         }
 
@@ -440,7 +326,7 @@ namespace Multibody
         {
             if (e.Button == MouseButtons.Left)
             {
-                ViewOperationStart();
+                _Simulation.ViewOperationStart();
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -453,7 +339,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                ViewOperationStop();
+                _Simulation.ViewOperationStop();
             }
         }
 
@@ -461,9 +347,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                PointD off = new PointD((e.X - _CursorLocation.X) * _SpaceMag, (e.Y - _CursorLocation.Y) * _SpaceMag);
+                PointD off = new PointD((e.X - _CursorLocation.X) * _Simulation.SpaceMag, (e.Y - _CursorLocation.Y) * _Simulation.SpaceMag);
 
-                ViewOperationUpdateParam((ViewOperationType.OffsetX, off.X), (ViewOperationType.OffsetY, off.Y));
+                _Simulation.ViewOperationUpdateParam((Simulation.ViewOperationType.OffsetX, off.X), (Simulation.ViewOperationType.OffsetY, off.Y));
             }
         }
 
@@ -471,246 +357,33 @@ namespace Multibody
         {
             if (!_AdjustNow)
             {
-                double off = _SpaceMag;
+                double off = _Simulation.SpaceMag;
 
                 if (e.Delta > 0)
                 {
                     off = -off;
                 }
 
-                ViewOperationStart();
-                ViewOperationUpdateParam(ViewOperationType.OffsetZ, off);
-                ViewOperationStop();
+                _Simulation.ViewOperationStart();
+                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetZ, off);
+                _Simulation.ViewOperationStop();
             }
         }
 
         #endregion
 
-        #region 渲染
+        #region 重绘
 
-        private Bitmap _MultibodyBitmap = null; // 多体系统当前渲染的位图。
-
-        // 将多体系统的当前状态渲染到位图。
-        private void UpdateMultibodyBitmap()
-        {
-            if (_MultibodyBitmap != null)
-            {
-                _MultibodyBitmap.Dispose();
-            }
-
-            _MultibodyBitmap = new Bitmap(Math.Max(1, Panel_View.Width), Math.Max(1, Panel_View.Height + Me.CaptionBarHeight));
-
-            if (_MultibodySystem != null)
-            {
-                using (Graphics Grap = Graphics.FromImage(_MultibodyBitmap))
-                {
-                    Grap.SmoothingMode = SmoothingMode.AntiAlias;
-                    Grap.Clear(Panel_View.BackColor);
-
-                    RectangleF bitmapBounds = new RectangleF(new PointF(), _MultibodyBitmap.Size);
-
-                    List<Particle> particles = _MultibodySystem.LatestFrame.Particles;
-
-                    int FrameCount = _MultibodySystem.FrameCount;
-
-                    for (int i = 0; i < particles.Count; i++)
-                    {
-                        PointD location = WorldToScreen(particles[i].Location);
-
-                        for (int j = FrameCount - 1; j >= 1; j--)
-                        {
-                            PointD pt1 = WorldToScreen(_MultibodySystem.Frame(j).Particles[i].Location);
-                            PointD pt2 = WorldToScreen(_MultibodySystem.Frame(j - 1).Particles[i].Location);
-
-                            if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
-                            {
-                                Painting2D.PaintLine(_MultibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
-                            }
-                        }
-                    }
-
-                    for (int i = 0; i < particles.Count; i++)
-                    {
-                        PointD location = WorldToScreen(particles[i].Location);
-
-                        float radius = Math.Max(1, (float)(particles[i].Radius * _FocalLength / particles[i].Location.Z));
-
-                        if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
-                        {
-                            using (Brush Br = new SolidBrush(particles[i].Color))
-                            {
-                                Grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
-                            }
-                        }
-                    }
-
-                    using (Brush Br = new SolidBrush(Color.Silver))
-                    {
-                        Font ft = new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134);
-
-                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight));
-                        Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(0, Me.CaptionBarHeight + 25));
-                        Grap.DrawString("Graphics:    " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(0, Me.CaptionBarHeight + 50));
-                        Grap.DrawString("Time:           " + Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(0, Me.CaptionBarHeight + 75));
-                    }
-
-                    _FrameRateCounter.Update();
-                }
-            }
-        }
-
-        // 渲染位图并重绘。
+        // 重绘方法。
         private void RepaintMultibodyBitmap()
         {
-            UpdateMultibodyBitmap();
+            Bitmap _MultibodyBitmap = _Simulation.CurrentBitmap;
 
             if (_MultibodyBitmap != null)
             {
                 Me.CaptionBarBackgroundImage = _MultibodyBitmap;
 
                 Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
-            }
-        }
-
-        private void Panel_View_Paint(object sender, PaintEventArgs e)
-        {
-            if (_MultibodyBitmap == null)
-            {
-                UpdateMultibodyBitmap();
-            }
-
-            if (_MultibodyBitmap != null)
-            {
-                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
-
-                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
-            }
-        }
-
-        #endregion
-
-        #region 重绘线程和帧率控制
-
-        private Thread _RedrawThread; // 重绘线程。
-
-        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
-
-        // 重绘线程开始。
-        private void RedrawThreadStart()
-        {
-            _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
-
-            _AffineTransformation = AffineTransformation.Empty;
-
-            _RedrawThread = new Thread(new ThreadStart(RedrawThreadEvent));
-            _RedrawThread.IsBackground = true;
-            _RedrawThread.Start();
-        }
-
-        // 重绘线程停止。
-        private void RedrawThreadStop()
-        {
-            if (_RedrawThread != null && _RedrawThread.IsAlive)
-            {
-                _RedrawThread.Abort();
-            }
-        }
-
-        // 重绘线程执行的事件。
-        private void RedrawThreadEvent()
-        {
-            int KCount = 1;
-            int SleepMS = 0;
-
-            DateTime LastAdjust = DateTime.MinValue;
-            Stopwatch Watch = new Stopwatch();
-
-            while (true)
-            {
-                Watch.Restart();
-
-                _MultibodySystem.NextMoment(_KinematicsResolution * KCount);
-
-                Watch.Stop();
-
-                double KSecEachActual = Math.Max(0.000001, Watch.ElapsedMilliseconds * 0.001) / KCount;
-
-                Watch.Restart();
-
-                this.Invoke(new Action(RepaintMultibodyBitmap));
-
-                Watch.Stop();
-
-                double GSecEachActual = Math.Max(0.001, Watch.ElapsedMilliseconds * 0.001);
-
-                double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
-
-                if ((DateTime.UtcNow - LastAdjust).TotalSeconds >= 1 && DFpsActual > 0)
-                {
-                    double DFpsExpect = _TimeMag / _DynamicsResolution;
-                    double DFpsRatio = DFpsActual / DFpsExpect;
-
-                    if (DFpsRatio > 1.1 || DFpsRatio < 0.9)
-                    {
-                        double KFpsExpect = _TimeMag / _KinematicsResolution;
-                        double KSecTotalExpect = KFpsExpect * KSecEachActual;
-                        double GFpsExpect = Math.Min(KFpsExpect, (1 - KSecTotalExpect) / GSecEachActual);
-
-                        if (GFpsExpect > 0)
-                        {
-                            double GSecTotalExpect = GFpsExpect * GSecEachActual;
-                            double SleepSecExpect = 1 - KSecTotalExpect - GSecTotalExpect;
-
-                            if (SleepSecExpect > 0.001)
-                            {
-                                KCount = 1;
-                                SleepMS = (int)Math.Round(SleepSecExpect * 1000 / GFpsExpect);
-                            }
-                            else
-                            {
-                                KCount = (int)Math.Round(Math.Min(KFpsExpect, KFpsExpect / GFpsExpect));
-                                SleepMS = 0;
-                            }
-                        }
-                        else
-                        {
-                            KCount = (int)Math.Round(KFpsExpect);
-                            SleepMS = 0;
-                        }
-                    }
-                    else
-                    {
-                        if (DFpsRatio > 1.01)
-                        {
-                            if (KCount > 1)
-                            {
-                                KCount--;
-                            }
-                            else if (SleepMS < 1000)
-                            {
-                                SleepMS++;
-                            }
-                        }
-                        else if (DFpsRatio < 0.99)
-                        {
-                            if (SleepMS > 0)
-                            {
-                                SleepMS--;
-                            }
-                            else if (_FrameRateCounter.Frequency > 1)
-                            {
-                                KCount++;
-                            }
-                        }
-                    }
-
-                    LastAdjust = DateTime.UtcNow;
-                }
-
-                if (SleepMS > 0)
-                {
-                    Thread.Sleep(SleepMS);
-                }
             }
         }
 
