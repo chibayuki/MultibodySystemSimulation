@@ -36,6 +36,7 @@ using Texting = Com.Text;
 using VectorType = Com.Vector.Type;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
+using UIMessage = Com.WinForm.UIMessage;
 
 namespace Multibody
 {
@@ -242,7 +243,7 @@ namespace Multibody
                 ((Label)sender).BackColor = Me.RecommendColors.Button_INC.ToColor();
                 ((Label)sender).Cursor = Cursors.SizeWE;
 
-                _Simulation.ViewOperationStart();
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -255,7 +256,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                _Simulation.ViewOperationStop();
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
 
                 ((Label)sender).BackColor = (Geometry.CursorIsInControl((Label)sender) ? Me.RecommendColors.Button_DEC.ToColor() : Me.RecommendColors.Background_INC.ToColor());
                 ((Label)sender).Cursor = Cursors.Default;
@@ -268,7 +269,7 @@ namespace Multibody
             {
                 double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetX, off);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetX, off) } });
             }
         }
 
@@ -278,7 +279,7 @@ namespace Multibody
             {
                 double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetY, off);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetY, off) } });
             }
         }
 
@@ -288,7 +289,7 @@ namespace Multibody
             {
                 double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetZ, off);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetZ, off) } });
             }
         }
 
@@ -298,7 +299,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateX, rot);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateX, rot) } });
             }
         }
 
@@ -308,7 +309,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateY, rot);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateY, rot) } });
             }
         }
 
@@ -318,7 +319,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.RotateZ, rot);
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateZ, rot) } });
             }
         }
 
@@ -326,7 +327,7 @@ namespace Multibody
         {
             if (e.Button == MouseButtons.Left)
             {
-                _Simulation.ViewOperationStart();
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -339,7 +340,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                _Simulation.ViewOperationStop();
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
             }
         }
 
@@ -349,7 +350,7 @@ namespace Multibody
             {
                 PointD off = new PointD((e.X - _CursorLocation.X) * _Simulation.SpaceMag, (e.Y - _CursorLocation.Y) * _Simulation.SpaceMag);
 
-                _Simulation.ViewOperationUpdateParam((Simulation.ViewOperationType.OffsetX, off.X), (Simulation.ViewOperationType.OffsetY, off.Y));
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetX, off.X), (Simulation.ViewOperationType.OffsetY, off.Y) } });
             }
         }
 
@@ -364,9 +365,9 @@ namespace Multibody
                     off = -off;
                 }
 
-                _Simulation.ViewOperationStart();
-                _Simulation.ViewOperationUpdateParam(Simulation.ViewOperationType.OffsetZ, off);
-                _Simulation.ViewOperationStop();
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetZ, off) } });
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
             }
         }
 
@@ -375,15 +376,13 @@ namespace Multibody
         #region 重绘
 
         // 重绘方法。
-        private void RepaintMultibodyBitmap()
+        private void RepaintMultibodyBitmap(Bitmap bitmap)
         {
-            Bitmap _MultibodyBitmap = _Simulation.CurrentBitmap;
-
-            if (_MultibodyBitmap != null)
+            if (bitmap != null)
             {
-                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
+                Me.CaptionBarBackgroundImage = bitmap;
 
-                Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
+                Panel_View.CreateGraphics().DrawImage(bitmap, new Point(0, -Me.CaptionBarHeight));
             }
         }
 

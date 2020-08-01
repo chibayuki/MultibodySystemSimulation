@@ -29,20 +29,208 @@ using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Texting = Com.Text;
 using VectorType = Com.Vector.Type;
+using UIMessage = Com.WinForm.UIMessage;
+using UIMessageProcessor = Com.WinForm.UIMessageProcessor;
 
 namespace Multibody
 {
     // 仿真。
-    class Simulation
+    class Simulation : UIMessageProcessor
     {
+        // 消息码。
+        public enum MessageCode
+        {
+            ViewOperationStart,
+            ViewOperationUpdateParam,
+            ViewOperationStop
+        }
+
         #region 构造函数
 
-        public Simulation(Control redrawControl, Action redrawMethod, Func<Point> getOffsetMethod, Func<Size> getBitmapSizeMethod)
+        public Simulation(Control redrawControl, Action<Bitmap> redrawMethod, Func<Point> getOffsetMethod, Func<Size> getBitmapSizeMethod) : base()
         {
             _RedrawControl = redrawControl;
             _RedrawMethod = redrawMethod;
             _GetOffsetMethod = getOffsetMethod;
             _GetBitmapSizeMethod = getBitmapSizeMethod;
+        }
+
+        #endregion
+
+        #region 消息处理器
+
+        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out List<int> discardIndexes)
+        {
+            processCount = int.MaxValue;
+            discardIndexes = null;
+        }
+
+        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out List<int> discardIndexes)
+        {
+            processCount = int.MaxValue;
+            discardIndexes = null;
+        }
+
+        protected override void ProcessMessage(UIMessage message)
+        {
+            switch (message.MessageCode)
+            {
+                case (int)MessageCode.ViewOperationStart:
+                    _ViewOperationStart();
+                    break;
+
+                case (int)MessageCode.ViewOperationUpdateParam:
+                    (ViewOperationType, double)[] requestData = message.RequestData as (ViewOperationType, double)[];
+                    _ViewOperationUpdateParam(requestData);
+                    break;
+
+                case (int)MessageCode.ViewOperationStop:
+                    _ViewOperationStop();
+                    break;
+            }
+        }
+
+        private int _KCount = 1; // 当前消息循环使用的运动学计数。
+        private int _SleepMS = 0; // 当前消息循环线程挂起的毫秒数。
+
+        private DateTime _LastAdjust = DateTime.MinValue; // 最近一次调整运动学计数与线程挂起的毫秒数的时刻。
+        private Stopwatch _Watch = new Stopwatch(); // 消息循环使用的计时器。
+
+        protected override void MessageLoop()
+        {
+            base.MessageLoop();
+
+            //
+
+            _Watch.Restart();
+
+            _MultibodySystem.NextMoment(_KinematicsResolution * _KCount);
+
+            _Watch.Stop();
+
+            double KSecEachActual = Math.Max(0.000001, _Watch.ElapsedMilliseconds * 0.001) / _KCount;
+
+            _Watch.Restart();
+
+            UpdateMultibodyBitmap();
+
+            _RedrawControl.Invoke(_RedrawMethod, (Bitmap)_MultibodyBitmap.Clone());
+
+            _Watch.Stop();
+
+            double GSecEachActual = Math.Max(0.001, _Watch.ElapsedMilliseconds * 0.001);
+
+            double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
+
+            if ((DateTime.UtcNow - _LastAdjust).TotalSeconds >= 1 && DFpsActual > 0)
+            {
+                double DFpsExpect = _TimeMag / _DynamicsResolution;
+                double DFpsRatio = DFpsActual / DFpsExpect;
+
+                if (DFpsRatio > 1.1 || DFpsRatio < 0.9)
+                {
+                    double KFpsExpect = _TimeMag / _KinematicsResolution;
+                    double KSecTotalExpect = KFpsExpect * KSecEachActual;
+                    double GFpsExpect = Math.Min(KFpsExpect, (1 - KSecTotalExpect) / GSecEachActual);
+
+                    if (GFpsExpect > 0)
+                    {
+                        double GSecTotalExpect = GFpsExpect * GSecEachActual;
+                        double SleepSecExpect = 1 - KSecTotalExpect - GSecTotalExpect;
+
+                        if (SleepSecExpect > 0.001)
+                        {
+                            _KCount = 1;
+                            _SleepMS = (int)Math.Round(SleepSecExpect * 1000 / GFpsExpect);
+                        }
+                        else
+                        {
+                            _KCount = (int)Math.Round(Math.Min(KFpsExpect, KFpsExpect / GFpsExpect));
+                            _SleepMS = 0;
+                        }
+                    }
+                    else
+                    {
+                        _KCount = (int)Math.Round(KFpsExpect);
+                        _SleepMS = 0;
+                    }
+                }
+                else
+                {
+                    if (DFpsRatio > 1.01)
+                    {
+                        if (_KCount > 1)
+                        {
+                            _KCount--;
+                        }
+                        else if (_SleepMS < 1000)
+                        {
+                            _SleepMS++;
+                        }
+                    }
+                    else if (DFpsRatio < 0.99)
+                    {
+                        if (_SleepMS > 0)
+                        {
+                            _SleepMS--;
+                        }
+                        else if (_FrameRateCounter.Frequency > 1)
+                        {
+                            _KCount++;
+                        }
+                    }
+                }
+
+                _LastAdjust = DateTime.UtcNow;
+            }
+
+            if (_SleepMS > 0)
+            {
+                Thread.Sleep(_SleepMS);
+            }
+        }
+
+        #endregion
+
+        #region 重绘线程和帧率控制
+
+        private bool _Redrawing = false; // 是否正在运行重绘线程。
+
+        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
+
+        // 动力学刷新率。
+        public double DynamicsFPS => _MultibodySystem.DynamicFrequencyCounter.Frequency;
+
+        // 运动学刷新率。
+        public double KinematicsFPS => _MultibodySystem.KinematicsFrequencyCounter.Frequency;
+
+        // 图形刷新率。
+        public double GraphicsFPS => _FrameRateCounter.Frequency;
+
+        // 重绘线程开始。
+        public void RedrawThreadStart()
+        {
+            if (!_Redrawing)
+            {
+                _Redrawing = true;
+
+                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+
+                _AffineTransformation = AffineTransformation.Empty;
+
+                Start();
+            }
+        }
+
+        // 重绘线程停止。
+        public void RedrawThreadStop()
+        {
+            if (_Redrawing)
+            {
+                Stop();
+
+                _Redrawing = false;
+            }
         }
 
         #endregion
@@ -123,6 +311,16 @@ namespace Multibody
 
         private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
 
+        //
+
+        // 世界坐标系转换到屏幕坐标系。
+        private PointD _WorldToScreen(PointD3D pt)
+        {
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_GetOffsetMethod());
+        }
+
+        //
+
         public double FocalLength
         {
             get
@@ -149,20 +347,16 @@ namespace Multibody
             }
         }
 
-        // 世界坐标系转换到屏幕坐标系。
-        private PointD WorldToScreen(PointD3D pt)
-        {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_GetOffsetMethod());
-        }
+        //
 
         // 视图控制开始。
-        public void ViewOperationStart()
+        public void _ViewOperationStart()
         {
             _AffineTransformationCopy = _AffineTransformation.Copy();
         }
 
         // 视图控制停止。
-        public void ViewOperationStop()
+        public void _ViewOperationStop()
         {
             _AffineTransformationCopy = null;
         }
@@ -179,37 +373,7 @@ namespace Multibody
         }
 
         // 视图控制更新参数。
-        public void ViewOperationUpdateParam(ViewOperationType type, double value)
-        {
-            if (value != 0)
-            {
-                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
-
-                if (type <= ViewOperationType.OffsetZ)
-                {
-                    switch (type)
-                    {
-                        case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
-                        case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
-                        case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
-                    }
-                }
-                else
-                {
-                    switch (type)
-                    {
-                        case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
-                        case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
-                        case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
-                    }
-                }
-
-                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
-            }
-        }
-
-        // 视图控制更新参数。
-        public void ViewOperationUpdateParam(params (ViewOperationType type, double value)[] param)
+        public void _ViewOperationUpdateParam(params (ViewOperationType type, double value)[] param)
         {
             if (param != null && param.Length > 0)
             {
@@ -252,7 +416,7 @@ namespace Multibody
         #region 渲染
 
         private Control _RedrawControl; // 用于重绘的控件。
-        private Action _RedrawMethod; // 用于重绘的方法。
+        private Action<Bitmap> _RedrawMethod; // 用于重绘的方法。
         private Func<Point> _GetOffsetMethod; // 用于获取坐标系偏移的方法。
         private Func<Size> _GetBitmapSizeMethod; // 用于获取位图大小的方法。
 
@@ -280,12 +444,12 @@ namespace Multibody
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        PointD location = WorldToScreen(particles[i].Location);
+                        PointD location = _WorldToScreen(particles[i].Location);
 
                         for (int j = FrameCount - 1; j >= 1; j--)
                         {
-                            PointD pt1 = WorldToScreen(_MultibodySystem.Frame(j).Particles[i].Location);
-                            PointD pt2 = WorldToScreen(_MultibodySystem.Frame(j - 1).Particles[i].Location);
+                            PointD pt1 = _WorldToScreen(_MultibodySystem.Frame(j).Particles[i].Location);
+                            PointD pt2 = _WorldToScreen(_MultibodySystem.Frame(j - 1).Particles[i].Location);
 
                             if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                             {
@@ -296,7 +460,7 @@ namespace Multibody
 
                     for (int i = 0; i < particles.Count; i++)
                     {
-                        PointD location = WorldToScreen(particles[i].Location);
+                        PointD location = _WorldToScreen(particles[i].Location);
 
                         float radius = Math.Max(1, (float)(particles[i].Radius * _FocalLength / particles[i].Location.Z));
 
@@ -329,170 +493,6 @@ namespace Multibody
             }
 
             _MultibodyBitmap = multibodyBitmap;
-        }
-
-        // 获取多体系统当前渲染的位图。
-        public Bitmap CurrentBitmap
-        {
-            get
-            {
-                if (_MultibodyBitmap == null)
-                {
-                    UpdateMultibodyBitmap();
-                }
-
-                return _MultibodyBitmap;
-            }
-        }
-
-        #endregion
-
-        #region 重绘线程和帧率控制
-
-        private bool _Redrawing = false; // 是否正在运行重绘线程。
-
-        private Thread _RedrawThread; // 重绘线程。
-
-        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
-
-        // 动力学刷新率。
-        public double DynamicsFPS => _MultibodySystem.DynamicFrequencyCounter.Frequency;
-
-        // 运动学刷新率。
-        public double KinematicsFPS => _MultibodySystem.KinematicsFrequencyCounter.Frequency;
-
-        // 图形刷新率。
-        public double GraphicsFPS => _FrameRateCounter.Frequency;
-
-        // 重绘线程开始。
-        public void RedrawThreadStart()
-        {
-            if (!_Redrawing)
-            {
-                _Redrawing = true;
-
-                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
-
-                _AffineTransformation = AffineTransformation.Empty;
-
-                _RedrawThread = new Thread(new ThreadStart(RedrawThreadEvent));
-                _RedrawThread.IsBackground = true;
-                _RedrawThread.Start();
-            }
-        }
-
-        // 重绘线程停止。
-        public void RedrawThreadStop()
-        {
-            if (_Redrawing)
-            {
-                if (_RedrawThread != null && _RedrawThread.IsAlive)
-                {
-                    _RedrawThread.Abort();
-                }
-
-                _Redrawing = false;
-            }
-        }
-
-        // 重绘线程执行的事件。
-        private void RedrawThreadEvent()
-        {
-            int KCount = 1;
-            int SleepMS = 0;
-
-            DateTime LastAdjust = DateTime.MinValue;
-            Stopwatch Watch = new Stopwatch();
-
-            while (true)
-            {
-                Watch.Restart();
-
-                _MultibodySystem.NextMoment(_KinematicsResolution * KCount);
-
-                Watch.Stop();
-
-                double KSecEachActual = Math.Max(0.000001, Watch.ElapsedMilliseconds * 0.001) / KCount;
-
-                Watch.Restart();
-
-                UpdateMultibodyBitmap();
-
-                _RedrawControl.Invoke(_RedrawMethod);
-
-                Watch.Stop();
-
-                double GSecEachActual = Math.Max(0.001, Watch.ElapsedMilliseconds * 0.001);
-
-                double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
-
-                if ((DateTime.UtcNow - LastAdjust).TotalSeconds >= 1 && DFpsActual > 0)
-                {
-                    double DFpsExpect = _TimeMag / _DynamicsResolution;
-                    double DFpsRatio = DFpsActual / DFpsExpect;
-
-                    if (DFpsRatio > 1.1 || DFpsRatio < 0.9)
-                    {
-                        double KFpsExpect = _TimeMag / _KinematicsResolution;
-                        double KSecTotalExpect = KFpsExpect * KSecEachActual;
-                        double GFpsExpect = Math.Min(KFpsExpect, (1 - KSecTotalExpect) / GSecEachActual);
-
-                        if (GFpsExpect > 0)
-                        {
-                            double GSecTotalExpect = GFpsExpect * GSecEachActual;
-                            double SleepSecExpect = 1 - KSecTotalExpect - GSecTotalExpect;
-
-                            if (SleepSecExpect > 0.001)
-                            {
-                                KCount = 1;
-                                SleepMS = (int)Math.Round(SleepSecExpect * 1000 / GFpsExpect);
-                            }
-                            else
-                            {
-                                KCount = (int)Math.Round(Math.Min(KFpsExpect, KFpsExpect / GFpsExpect));
-                                SleepMS = 0;
-                            }
-                        }
-                        else
-                        {
-                            KCount = (int)Math.Round(KFpsExpect);
-                            SleepMS = 0;
-                        }
-                    }
-                    else
-                    {
-                        if (DFpsRatio > 1.01)
-                        {
-                            if (KCount > 1)
-                            {
-                                KCount--;
-                            }
-                            else if (SleepMS < 1000)
-                            {
-                                SleepMS++;
-                            }
-                        }
-                        else if (DFpsRatio < 0.99)
-                        {
-                            if (SleepMS > 0)
-                            {
-                                SleepMS--;
-                            }
-                            else if (_FrameRateCounter.Frequency > 1)
-                            {
-                                KCount++;
-                            }
-                        }
-                    }
-
-                    LastAdjust = DateTime.UtcNow;
-                }
-
-                if (SleepMS > 0)
-                {
-                    Thread.Sleep(SleepMS);
-                }
-            }
         }
 
         #endregion
