@@ -72,16 +72,16 @@ namespace Multibody
             UpdateBitmapSize
         }
 
-        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardIndexes)
+        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
             processCount = int.MaxValue;
-            discardIndexes = null;
+            discardUids = null;
         }
 
-        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardIndexes)
+        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
             processCount = int.MaxValue;
-            discardIndexes = null;
+            discardUids = null;
         }
 
         protected override void ProcessMessage(UIMessage message)
