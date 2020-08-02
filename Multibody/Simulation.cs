@@ -37,35 +37,48 @@ namespace Multibody
     // 仿真。
     class Simulation : UIMessageProcessor
     {
-        // 消息码。
-        public enum MessageCode
-        {
-            ViewOperationStart,
-            ViewOperationUpdateParam,
-            ViewOperationStop
-        }
-
         #region 构造函数
 
-        public Simulation(Control redrawControl, Action<Bitmap> redrawMethod, Func<Point> getOffsetMethod, Func<Size> getBitmapSizeMethod) : base()
+        private Control _RedrawControl; // 用于重绘的控件。
+        private Action<Bitmap> _RedrawMethod; // 用于重绘的方法。
+
+        public Simulation(Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize) : base()
         {
             _RedrawControl = redrawControl;
             _RedrawMethod = redrawMethod;
-            _GetOffsetMethod = getOffsetMethod;
-            _GetBitmapSizeMethod = getBitmapSizeMethod;
+            _CoordinateOffset = coordinateOffset;
+            _BitmapSize = bitmapSize;
         }
 
         #endregion
 
         #region 消息处理器
 
-        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out List<int> discardIndexes)
+        // 消息码。
+        public enum MessageCode
+        {
+            AddParticle,
+            GetParticle,
+            SetParticle,
+
+            SimulationStart,
+            SimulationStop,
+
+            ViewOperationStart,
+            ViewOperationUpdateParam,
+            ViewOperationStop,
+
+            UpdateCoordinateOffset,
+            UpdateBitmapSize
+        }
+
+        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardIndexes)
         {
             processCount = int.MaxValue;
             discardIndexes = null;
         }
 
-        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out List<int> discardIndexes)
+        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardIndexes)
         {
             processCount = int.MaxValue;
             discardIndexes = null;
@@ -75,26 +88,53 @@ namespace Multibody
         {
             switch (message.MessageCode)
             {
+                case (int)MessageCode.SimulationStart:
+                    _SimulationStart();
+                    break;
+
+                case (int)MessageCode.SimulationStop:
+                    _SimulationStop();
+                    break;
+
+                //
+
+                case (int)MessageCode.AddParticle:
+                    _AddParticle((Particle)message.RequestData);
+                    break;
+
+                case (int)MessageCode.GetParticle:
+                    message.ReplyData = _GetParticle((int)message.RequestData);
+                    break;
+
+                case (int)MessageCode.SetParticle:
+                    _SetParticle(((int, Particle))message.RequestData);
+                    break;
+
+                //
+
                 case (int)MessageCode.ViewOperationStart:
                     _ViewOperationStart();
                     break;
 
                 case (int)MessageCode.ViewOperationUpdateParam:
-                    (ViewOperationType, double)[] requestData = message.RequestData as (ViewOperationType, double)[];
-                    _ViewOperationUpdateParam(requestData);
+                    _ViewOperationUpdateParam(((ViewOperationType, double)[])message.RequestData);
                     break;
 
                 case (int)MessageCode.ViewOperationStop:
                     _ViewOperationStop();
                     break;
+
+                //
+
+                case (int)MessageCode.UpdateCoordinateOffset:
+                    _UpdateCoordinateOffset((Point)message.RequestData);
+                    break;
+
+                case (int)MessageCode.UpdateBitmapSize:
+                    _UpdateBitmapSize((Size)message.RequestData);
+                    break;
             }
         }
-
-        private int _KCount = 1; // 当前消息循环使用的运动学计数。
-        private int _SleepMS = 0; // 当前消息循环线程挂起的毫秒数。
-
-        private DateTime _LastAdjust = DateTime.MinValue; // 最近一次调整运动学计数与线程挂起的毫秒数的时刻。
-        private Stopwatch _Watch = new Stopwatch(); // 消息循环使用的计时器。
 
         protected override void MessageLoop()
         {
@@ -102,6 +142,256 @@ namespace Multibody
 
             //
 
+            _RedrawAndFPSAdjust();
+        }
+
+        #endregion
+
+        #region 粒子与多体系统
+
+        private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
+        private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
+        private double _CacheSize = 1000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度，表现为轨迹长度。
+
+        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
+
+        public double DynamicsResolution
+        {
+            get
+            {
+                return _DynamicsResolution;
+            }
+
+            set
+            {
+                _DynamicsResolution = value;
+            }
+        }
+
+        public double KinematicsResolution
+        {
+            get
+            {
+                return _KinematicsResolution;
+            }
+
+            set
+            {
+                _KinematicsResolution = value;
+            }
+        }
+
+        public double CacheSize
+        {
+            get
+            {
+                return _CacheSize;
+            }
+
+            set
+            {
+                _CacheSize = value;
+            }
+        }
+
+        public double TimeMag
+        {
+            get
+            {
+                return _TimeMag;
+            }
+
+            set
+            {
+                _TimeMag = value;
+            }
+        }
+
+        //
+
+        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
+        private MultibodySystem _MultibodySystem = null; // 多体系统。
+
+        // 添加粒子。
+        private void _AddParticle(Particle particle)
+        {
+            _Particles.Add(particle.Copy());
+        }
+
+        // 获取粒子。
+        private Particle _GetParticle(int index)
+        {
+            return _Particles[index].Copy();
+        }
+
+        // 设置粒子。
+        private void _SetParticle((int index, Particle particle) param)
+        {
+            _Particles[param.index] = param.particle.Copy();
+        }
+
+        #endregion
+
+        #region 仿真
+
+        private bool _SimulationIsRunning = false; // 是否正在运行仿真。
+
+        // 仿真开始。
+        private void _SimulationStart()
+        {
+            if (!_SimulationIsRunning)
+            {
+                _SimulationIsRunning = true;
+
+                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+
+                _AffineTransformation = AffineTransformation.Empty;
+            }
+        }
+
+        // 仿真停止。
+        private void _SimulationStop()
+        {
+            if (_SimulationIsRunning)
+            {
+                _SimulationIsRunning = false;
+            }
+        }
+
+        #endregion
+
+        #region 图形学与视图控制
+
+        private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
+        private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
+
+        //
+
+        private double _FocalLength = 1000; // 投影变换使用的焦距。
+
+        private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
+
+        public double FocalLength
+        {
+            get
+            {
+                return _FocalLength;
+            }
+
+            set
+            {
+                _FocalLength = value;
+            }
+        }
+
+        public double SpaceMag
+        {
+            get
+            {
+                return _SpaceMag;
+            }
+
+            set
+            {
+                _SpaceMag = value;
+            }
+        }
+
+        //
+
+        private Point _CoordinateOffset; // 坐标系偏移。
+
+        // 更新坐标系偏移。
+        private void _UpdateCoordinateOffset(Point coordinateOffset)
+        {
+            _CoordinateOffset = coordinateOffset;
+        }
+
+        // 世界坐标系转换到屏幕坐标系。
+        private PointD _WorldToScreen(PointD3D pt)
+        {
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
+        }
+
+        //
+
+        // 视图控制开始。
+        private void _ViewOperationStart()
+        {
+            _AffineTransformationCopy = _AffineTransformation.Copy();
+        }
+
+        // 视图控制停止。
+        private void _ViewOperationStop()
+        {
+            _AffineTransformationCopy = null;
+        }
+
+        // 视图控制类型。
+        public enum ViewOperationType
+        {
+            OffsetX,
+            OffsetY,
+            OffsetZ,
+            RotateX,
+            RotateY,
+            RotateZ
+        }
+
+        // 视图控制更新参数。
+        private void _ViewOperationUpdateParam((ViewOperationType type, double value)[] param)
+        {
+            if (param != null && param.Length > 0)
+            {
+                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
+
+                for (int i = 0; i < param.Length; i++)
+                {
+                    ViewOperationType type = param[i].type;
+                    double value = param[i].value;
+
+                    if (value != 0)
+                    {
+                        if (type <= ViewOperationType.OffsetZ)
+                        {
+                            switch (type)
+                            {
+                                case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
+                                case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
+                                case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
+                            }
+                        }
+                        else
+                        {
+                            switch (type)
+                            {
+                                case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
+                                case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
+                                case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
+                            }
+                        }
+                    }
+                }
+
+                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
+            }
+        }
+
+        #endregion
+
+        #region 重绘与帧率控制
+
+        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
+
+        private int _KCount = 1; // 当前消息循环使用的运动学计数。
+        private int _SleepMS = 0; // 当前消息循环线程挂起的毫秒数。
+
+        private DateTime _LastFPSAdjust = DateTime.MinValue; // 最近一次调整运动学计数与线程挂起的毫秒数的时刻。
+        private Stopwatch _Watch = new Stopwatch(); // 消息循环使用的计时器。
+
+        // 重绘并调整帧率。
+        private void _RedrawAndFPSAdjust()
+        {
             _Watch.Restart();
 
             _MultibodySystem.NextMoment(_KinematicsResolution * _KCount);
@@ -112,9 +402,10 @@ namespace Multibody
 
             _Watch.Restart();
 
-            UpdateMultibodyBitmap();
-
-            _RedrawControl.Invoke(_RedrawMethod, (Bitmap)_MultibodyBitmap.Clone());
+            using (Bitmap bitmap = _GenerateBitmap())
+            {
+                _RedrawControl.Invoke(_RedrawMethod, (Bitmap)bitmap.Clone());
+            }
 
             _Watch.Stop();
 
@@ -122,7 +413,7 @@ namespace Multibody
 
             double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
 
-            if ((DateTime.UtcNow - _LastAdjust).TotalSeconds >= 1 && DFpsActual > 0)
+            if ((DateTime.UtcNow - _LastFPSAdjust).TotalSeconds >= 1 && DFpsActual > 0)
             {
                 double DFpsExpect = _TimeMag / _DynamicsResolution;
                 double DFpsRatio = DFpsActual / DFpsExpect;
@@ -181,7 +472,7 @@ namespace Multibody
                     }
                 }
 
-                _LastAdjust = DateTime.UtcNow;
+                _LastFPSAdjust = DateTime.UtcNow;
             }
 
             if (_SleepMS > 0)
@@ -190,13 +481,7 @@ namespace Multibody
             }
         }
 
-        #endregion
-
-        #region 重绘线程和帧率控制
-
-        private bool _Redrawing = false; // 是否正在运行重绘线程。
-
-        private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
+        //
 
         // 动力学刷新率。
         public double DynamicsFPS => _MultibodySystem.DynamicFrequencyCounter.Frequency;
@@ -207,236 +492,33 @@ namespace Multibody
         // 图形刷新率。
         public double GraphicsFPS => _FrameRateCounter.Frequency;
 
-        // 重绘线程开始。
-        public void RedrawThreadStart()
-        {
-            if (!_Redrawing)
-            {
-                _Redrawing = true;
-
-                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
-
-                _AffineTransformation = AffineTransformation.Empty;
-
-                Start();
-            }
-        }
-
-        // 重绘线程停止。
-        public void RedrawThreadStop()
-        {
-            if (_Redrawing)
-            {
-                Stop();
-
-                _Redrawing = false;
-            }
-        }
-
-        #endregion
-
-        #region 粒子和多体系统定义
-
-        private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
-        private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
-        private double _CacheSize = 1000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度，表现为轨迹长度。
-
-        private double _TimeMag = 100000; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
-
-        private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
-        private MultibodySystem _MultibodySystem = null; // 多体系统。
-
-        public double DynamicsResolution
-        {
-            get
-            {
-                return _DynamicsResolution;
-            }
-
-            set
-            {
-                _DynamicsResolution = value;
-            }
-        }
-
-        public double KinematicsResolution
-        {
-            get
-            {
-                return _KinematicsResolution;
-            }
-
-            set
-            {
-                _KinematicsResolution = value;
-            }
-        }
-
-        public double CacheSize
-        {
-            get
-            {
-                return _CacheSize;
-            }
-
-            set
-            {
-                _CacheSize = value;
-            }
-        }
-
-        public double TimeMag
-        {
-            get
-            {
-                return _TimeMag;
-            }
-
-            set
-            {
-                _TimeMag = value;
-            }
-        }
-
-        public List<Particle> Particles => _Particles;
-
-        #endregion
-
-        #region 仿射、投影和视图控制
-
-        private AffineTransformation _AffineTransformation = null; // 当前使用的仿射变换。
-        private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
-
-        private double _FocalLength = 1000; // 投影变换使用的焦距。
-
-        private double _SpaceMag = 1; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
-
-        //
-
-        // 世界坐标系转换到屏幕坐标系。
-        private PointD _WorldToScreen(PointD3D pt)
-        {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_GetOffsetMethod());
-        }
-
-        //
-
-        public double FocalLength
-        {
-            get
-            {
-                return _FocalLength;
-            }
-
-            set
-            {
-                _FocalLength = value;
-            }
-        }
-
-        public double SpaceMag
-        {
-            get
-            {
-                return _SpaceMag;
-            }
-
-            set
-            {
-                _SpaceMag = value;
-            }
-        }
-
-        //
-
-        // 视图控制开始。
-        public void _ViewOperationStart()
-        {
-            _AffineTransformationCopy = _AffineTransformation.Copy();
-        }
-
-        // 视图控制停止。
-        public void _ViewOperationStop()
-        {
-            _AffineTransformationCopy = null;
-        }
-
-        // 视图控制类型。
-        public enum ViewOperationType
-        {
-            OffsetX,
-            OffsetY,
-            OffsetZ,
-            RotateX,
-            RotateY,
-            RotateZ
-        }
-
-        // 视图控制更新参数。
-        public void _ViewOperationUpdateParam(params (ViewOperationType type, double value)[] param)
-        {
-            if (param != null && param.Length > 0)
-            {
-                AffineTransformation affineTransformation = _AffineTransformationCopy.Copy();
-
-                for (int i = 0; i < param.Length; i++)
-                {
-                    ViewOperationType type = param[i].type;
-                    double value = param[i].value;
-
-                    if (value != 0)
-                    {
-                        if (type <= ViewOperationType.OffsetZ)
-                        {
-                            switch (type)
-                            {
-                                case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
-                                case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
-                                case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
-                            }
-                        }
-                        else
-                        {
-                            switch (type)
-                            {
-                                case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
-                                case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
-                                case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
-                            }
-                        }
-                    }
-                }
-
-                _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
-            }
-        }
-
         #endregion
 
         #region 渲染
 
-        private Control _RedrawControl; // 用于重绘的控件。
-        private Action<Bitmap> _RedrawMethod; // 用于重绘的方法。
-        private Func<Point> _GetOffsetMethod; // 用于获取坐标系偏移的方法。
-        private Func<Size> _GetBitmapSizeMethod; // 用于获取位图大小的方法。
+        private Size _BitmapSize; // 位图大小。
 
-        private Bitmap _MultibodyBitmap = null; // 多体系统当前渲染的位图。
-
-        // 将多体系统的当前状态渲染到位图。
-        private void UpdateMultibodyBitmap()
+        // 更新坐标系偏移。
+        private void _UpdateBitmapSize(Size bitmapSize)
         {
-            Size bitmapSize = _GetBitmapSizeMethod();
+            _BitmapSize = bitmapSize;
+        }
 
-            Bitmap multibodyBitmap = new Bitmap(Math.Max(1, bitmapSize.Width), Math.Max(1, bitmapSize.Height));
+        // 返回将多体系统的当前状态渲染得到的位图。
+        private Bitmap _GenerateBitmap()
+        {
+            Size bitmapSize = _BitmapSize;
+
+            Bitmap bitmap = new Bitmap(Math.Max(1, bitmapSize.Width), Math.Max(1, bitmapSize.Height));
 
             if (_MultibodySystem != null)
             {
-                using (Graphics Grap = Graphics.FromImage(multibodyBitmap))
+                using (Graphics Grap = Graphics.FromImage(bitmap))
                 {
                     Grap.SmoothingMode = SmoothingMode.AntiAlias;
                     Grap.Clear(_RedrawControl.BackColor);
 
-                    RectangleF bitmapBounds = new RectangleF(new PointF(), multibodyBitmap.Size);
+                    RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
                     List<Particle> particles = _MultibodySystem.LatestFrame.Particles;
 
@@ -453,7 +535,7 @@ namespace Multibody
 
                             if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                             {
-                                Painting2D.PaintLine(multibodyBitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
+                                Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, particles[i].Color), 1, true);
                             }
                         }
                     }
@@ -487,12 +569,7 @@ namespace Multibody
                 }
             }
 
-            if (_MultibodyBitmap != null)
-            {
-                _MultibodyBitmap.Dispose();
-            }
-
-            _MultibodyBitmap = multibodyBitmap;
+            return bitmap;
         }
 
         #endregion

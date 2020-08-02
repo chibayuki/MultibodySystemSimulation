@@ -19,21 +19,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-using System.Diagnostics;
-using System.Drawing.Drawing2D;
-using System.Threading;
-
-using AffineTransformation = Com.AffineTransformation;
 using ColorManipulation = Com.ColorManipulation;
 using ColorX = Com.ColorX;
-using FrequencyCounter = Com.FrequencyCounter;
 using Geometry = Com.Geometry;
-using Painting2D = Com.Painting2D;
 using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
-using Texting = Com.Text;
-using VectorType = Com.Vector.Type;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
 using UIMessage = Com.WinForm.UIMessage;
@@ -113,17 +104,20 @@ namespace Multibody
             const int d = 37;
             int i = 0;
 
-            _Simulation = new Simulation(Panel_View, RepaintMultibodyBitmap, ViewCenter, ViewSize);
+            _Simulation = new Simulation(Panel_View, _RedrawMethod, _ViewCenter(), _ViewSize());
 
-            _Simulation.Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Simulation.Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Simulation.Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles = new List<Particle>();
+            _Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
         }
 
         private void Me_Loaded(object sender, EventArgs e)
         {
             Me.OnThemeChanged();
             Me.OnSizeChanged();
+
+            //
 
             Label_OffsetX.MouseEnter += Label_ViewOperation_MouseEnter;
             Label_OffsetY.MouseEnter += Label_ViewOperation_MouseEnter;
@@ -165,12 +159,21 @@ namespace Multibody
             Panel_View.MouseMove += Panel_View_MouseMove;
             Panel_View.MouseWheel += Panel_View_MouseWheel;
 
-            _Simulation.RedrawThreadStart();
+            //
+
+            _Simulation.Start();
+
+            foreach (Particle particle in _Particles)
+            {
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.AddParticle) { RequestData = particle });
+            }
+
+            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.SimulationStart));
         }
 
         private void Me_Closed(object sender, EventArgs e)
         {
-            _Simulation.RedrawThreadStop();
+            _Simulation.Stop();
         }
 
         private void Me_Resize(object sender, EventArgs e)
@@ -179,6 +182,11 @@ namespace Multibody
             Panel_SideBar.Left = Panel_Main.Width - Panel_SideBar.Width;
 
             Panel_View.Size = Panel_Main.Size;
+
+            //
+
+            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateCoordinateOffset) { RequestData = _ViewCenter() });
+            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateBitmapSize) { RequestData = _ViewSize() });
         }
 
         private void Me_SizeChanged(object sender, EventArgs e)
@@ -200,25 +208,28 @@ namespace Multibody
 
         #endregion
 
-        #region 粒子和多体系统定义
+        #region 粒子与多体系统
 
         private Simulation _Simulation; // 仿真对象。
+        private List<Particle> _Particles; // 粒子列表。
 
         #endregion
 
         #region 视图控制
 
         // 视图中心。
-        private Point ViewCenter()
+        private Point _ViewCenter()
         {
             return new Point(Panel_View.Width / 2, Panel_View.Height / 2);
         }
 
         // 视图中心。
-        private Size ViewSize()
+        private Size _ViewSize()
         {
             return new Size(Panel_View.Width, Me.CaptionBarHeight + Panel_View.Height);
         }
+
+        //
 
         private const double _ShiftPerPixel = 1; // 每像素的偏移量（像素）。
         private const double _RadPerPixel = Math.PI / 180; // 每像素的旋转角度（弧度）。
@@ -375,14 +386,31 @@ namespace Multibody
 
         #region 重绘
 
-        // 重绘方法。
-        private void RepaintMultibodyBitmap(Bitmap bitmap)
-        {
-            if (bitmap != null)
-            {
-                Me.CaptionBarBackgroundImage = bitmap;
+        private Bitmap _MultibodyBitmap = null; // 多体系统的位图。
 
-                Panel_View.CreateGraphics().DrawImage(bitmap, new Point(0, -Me.CaptionBarHeight));
+        // 重绘方法。
+        private void _RedrawMethod(Bitmap bitmap)
+        {
+            if (_MultibodyBitmap != null)
+            {
+                _MultibodyBitmap.Dispose();
+            }
+
+            _MultibodyBitmap = bitmap;
+
+            if (_MultibodyBitmap != null)
+            {
+                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
+
+                Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
+            }
+        }
+
+        private void Panel_View_Paint(object sender, PaintEventArgs e)
+        {
+            if (_MultibodyBitmap != null)
+            {
+                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
             }
         }
 

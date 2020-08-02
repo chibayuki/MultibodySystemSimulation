@@ -34,7 +34,7 @@ namespace Multibody
                 throw new ArgumentException();
             }
 
-            if (particles == null || particles.Length <= 0)
+            if (particles == null/* || particles.Length <= 0*/)
             {
                 throw new ArgumentNullException();
             }
@@ -57,7 +57,7 @@ namespace Multibody
                 throw new ArgumentException();
             }
 
-            if (particles == null || particles.Count <= 0)
+            if (particles == null/* || particles.Count <= 0*/)
             {
                 throw new ArgumentNullException();
             }

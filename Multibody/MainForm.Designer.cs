@@ -145,6 +145,7 @@
             this.Panel_View.Name = "Panel_View";
             this.Panel_View.Size = new System.Drawing.Size(1200, 800);
             this.Panel_View.TabIndex = 0;
+            this.Panel_View.Paint += new System.Windows.Forms.PaintEventHandler(this.Panel_View_Paint);
             // 
             // MainForm
             // 
