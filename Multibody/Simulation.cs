@@ -39,9 +39,6 @@ namespace Multibody
     {
         #region 构造函数
 
-        private Control _RedrawControl; // 用于重绘的控件。
-        private Action<Bitmap> _RedrawMethod; // 用于重绘的方法。
-
         public Simulation(Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize) : base()
         {
             _RedrawControl = redrawControl;
@@ -380,6 +377,9 @@ namespace Multibody
         #endregion
 
         #region 重绘与帧率控制
+
+        private Control _RedrawControl; // 用于重绘的控件。
+        private Action<Bitmap> _RedrawMethod; // 用于重绘的方法。
 
         private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
 

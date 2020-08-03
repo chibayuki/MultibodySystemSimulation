@@ -28,6 +28,7 @@ using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
 using UIMessage = Com.WinForm.UIMessage;
+using UIMessageProcessorState = Com.WinForm.UIMessageProcessorState;
 
 namespace Multibody
 {
@@ -185,8 +186,11 @@ namespace Multibody
 
             //
 
-            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateCoordinateOffset) { RequestData = _ViewCenter() });
-            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateBitmapSize) { RequestData = _ViewSize() });
+            if (_Simulation.State == UIMessageProcessorState.Running)
+            {
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateCoordinateOffset) { RequestData = _ViewCenter() });
+                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateBitmapSize) { RequestData = _ViewSize() });
+            }
         }
 
         private void Me_SizeChanged(object sender, EventArgs e)
