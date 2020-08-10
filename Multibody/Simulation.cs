@@ -54,18 +54,26 @@ namespace Multibody
         // 消息码。
         public enum MessageCode
         {
-            AddParticle,
-            GetParticle,
-            SetParticle,
-
             SimulationStart,
             SimulationStop,
 
+            GetTimeMag,
+            SetTimeMag,
+
+            AddParticle,
+            RemoveParticle,
+            GetParticle,
+            SetParticle,
+
+            GetFocalLength,
+            SetFocalLength,
+            GetSpaceMag,
+            SetSpaceMag,
+            UpdateCoordinateOffset,
             ViewOperationStart,
             ViewOperationUpdateParam,
             ViewOperationStop,
 
-            UpdateCoordinateOffset,
             UpdateBitmapSize
         }
 
@@ -95,8 +103,22 @@ namespace Multibody
 
                 //
 
+                case (int)MessageCode.GetTimeMag:
+                    message.ReplyData = _GetTimeMag();
+                    break;
+
+                case (int)MessageCode.SetTimeMag:
+                    _SetTimeMag((double)message.RequestData);
+                    break;
+
+                //
+
                 case (int)MessageCode.AddParticle:
                     _AddParticle((Particle)message.RequestData);
+                    break;
+
+                case (int)MessageCode.RemoveParticle:
+                    _RemoveParticle((int)message.RequestData);
                     break;
 
                 case (int)MessageCode.GetParticle:
@@ -108,6 +130,26 @@ namespace Multibody
                     break;
 
                 //
+
+                case (int)MessageCode.GetFocalLength:
+                    message.ReplyData = _GetFocalLength();
+                    break;
+
+                case (int)MessageCode.SetFocalLength:
+                    _SetFocalLength((double)message.RequestData);
+                    break;
+
+                case (int)MessageCode.GetSpaceMag:
+                    message.ReplyData = _GetSpaceMag();
+                    break;
+
+                case (int)MessageCode.SetSpaceMag:
+                    _SetSpaceMag((double)message.RequestData);
+                    break;
+
+                case (int)MessageCode.UpdateCoordinateOffset:
+                    _UpdateCoordinateOffset((Point)message.RequestData);
+                    break;
 
                 case (int)MessageCode.ViewOperationStart:
                     _ViewOperationStart();
@@ -123,10 +165,6 @@ namespace Multibody
 
                 //
 
-                case (int)MessageCode.UpdateCoordinateOffset:
-                    _UpdateCoordinateOffset((Point)message.RequestData);
-                    break;
-
                 case (int)MessageCode.UpdateBitmapSize:
                     _UpdateBitmapSize((Size)message.RequestData);
                     break;
@@ -140,6 +178,34 @@ namespace Multibody
             //
 
             _RedrawAndFPSAdjust();
+        }
+
+        #endregion
+
+        #region 仿真
+
+        private bool _SimulationIsRunning = false; // 是否正在运行仿真。
+
+        // 仿真开始。
+        private void _SimulationStart()
+        {
+            if (!_SimulationIsRunning)
+            {
+                _SimulationIsRunning = true;
+
+                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+
+                _AffineTransformation = AffineTransformation.Empty;
+            }
+        }
+
+        // 仿真停止。
+        private void _SimulationStop()
+        {
+            if (_SimulationIsRunning)
+            {
+                _SimulationIsRunning = false;
+            }
         }
 
         #endregion
@@ -197,11 +263,16 @@ namespace Multibody
             {
                 return _TimeMag;
             }
+        }
 
-            set
-            {
-                _TimeMag = value;
-            }
+        private double _GetTimeMag()
+        {
+            return _TimeMag;
+        }
+
+        private void _SetTimeMag(double timeMag)
+        {
+            _TimeMag = timeMag;
         }
 
         //
@@ -215,6 +286,12 @@ namespace Multibody
             _Particles.Add(particle.Copy());
         }
 
+        // 删除粒子。
+        private void _RemoveParticle(int index)
+        {
+            _Particles.RemoveAt(index);
+        }
+
         // 获取粒子。
         private Particle _GetParticle(int index)
         {
@@ -225,34 +302,6 @@ namespace Multibody
         private void _SetParticle((int index, Particle particle) param)
         {
             _Particles[param.index] = param.particle.Copy();
-        }
-
-        #endregion
-
-        #region 仿真
-
-        private bool _SimulationIsRunning = false; // 是否正在运行仿真。
-
-        // 仿真开始。
-        private void _SimulationStart()
-        {
-            if (!_SimulationIsRunning)
-            {
-                _SimulationIsRunning = true;
-
-                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
-
-                _AffineTransformation = AffineTransformation.Empty;
-            }
-        }
-
-        // 仿真停止。
-        private void _SimulationStop()
-        {
-            if (_SimulationIsRunning)
-            {
-                _SimulationIsRunning = false;
-            }
         }
 
         #endregion
@@ -274,11 +323,16 @@ namespace Multibody
             {
                 return _FocalLength;
             }
+        }
 
-            set
-            {
-                _FocalLength = value;
-            }
+        private double _GetFocalLength()
+        {
+            return _FocalLength;
+        }
+
+        private void _SetFocalLength(double focalLength)
+        {
+            _FocalLength = focalLength;
         }
 
         public double SpaceMag
@@ -287,11 +341,16 @@ namespace Multibody
             {
                 return _SpaceMag;
             }
+        }
 
-            set
-            {
-                _SpaceMag = value;
-            }
+        private double _GetSpaceMag()
+        {
+            return _SpaceMag;
+        }
+
+        private void _SetSpaceMag(double spaceMag)
+        {
+            _SpaceMag = spaceMag;
         }
 
         //
@@ -302,12 +361,6 @@ namespace Multibody
         private void _UpdateCoordinateOffset(Point coordinateOffset)
         {
             _CoordinateOffset = coordinateOffset;
-        }
-
-        // 世界坐标系转换到屏幕坐标系。
-        private PointD _WorldToScreen(PointD3D pt)
-        {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
         }
 
         //
@@ -372,6 +425,14 @@ namespace Multibody
 
                 _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
             }
+        }
+
+        //
+
+        // 世界坐标系转换到屏幕坐标系。
+        private PointD _WorldToScreen(PointD3D pt)
+        {
+            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
         }
 
         #endregion
@@ -503,6 +564,8 @@ namespace Multibody
         {
             _BitmapSize = bitmapSize;
         }
+
+        //
 
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
