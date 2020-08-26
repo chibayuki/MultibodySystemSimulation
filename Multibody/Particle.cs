@@ -35,7 +35,7 @@ namespace Multibody
         {
             if ((double.IsNaN(mass) || double.IsInfinity(mass) || mass <= 0) || (double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0) || location.IsNaNOrInfinity || velocity.IsNaNOrInfinity || force.IsNaNOrInfinity)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
@@ -84,7 +84,7 @@ namespace Multibody
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
@@ -100,7 +100,7 @@ namespace Multibody
         {
             if (force.IsNaNOrInfinity)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
@@ -115,7 +115,7 @@ namespace Multibody
             {
                 if (force.IsNaNOrInfinity)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentOutOfRangeException();
                 }
             }
 

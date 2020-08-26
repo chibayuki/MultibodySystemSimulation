@@ -472,7 +472,7 @@ namespace Multibody
 
             double GSecEachActual = Math.Max(0.001, _Watch.ElapsedMilliseconds * 0.001);
 
-            double DFpsActual = _MultibodySystem.DynamicFrequencyCounter.Frequency;
+            double DFpsActual = _MultibodySystem.DynamicsFrequencyCounter.Frequency;
 
             if ((DateTime.UtcNow - _LastFPSAdjust).TotalSeconds >= 1 && DFpsActual > 0)
             {
@@ -545,7 +545,7 @@ namespace Multibody
         //
 
         // 动力学刷新率。
-        public double DynamicsFPS => _MultibodySystem.DynamicFrequencyCounter.Frequency;
+        public double DynamicsFPS => _MultibodySystem.DynamicsFrequencyCounter.Frequency;
 
         // 运动学刷新率。
         public double KinematicsFPS => _MultibodySystem.KinematicsFrequencyCounter.Frequency;
@@ -622,7 +622,7 @@ namespace Multibody
                     {
                         Font ft = new Font("微软雅黑", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 134);
 
-                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 100));
+                        Grap.DrawString("Dynamics:   " + _MultibodySystem.DynamicsFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 100));
                         Grap.DrawString("Kinematics: " + _MultibodySystem.KinematicsFrequencyCounter.Frequency.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 75));
                         Grap.DrawString("Graphics:    " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(5, bitmapSize.Height - 50));
                         Grap.DrawString("Time:           " + Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_MultibodySystem.LatestFrame.Time)), ft, Br, new Point(5, bitmapSize.Height - 25));

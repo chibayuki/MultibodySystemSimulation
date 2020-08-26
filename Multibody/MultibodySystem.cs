@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using FrequencyCounter = Com.FrequencyCounter;
+using FrameQueue = Com.IndexableQueue<Multibody.Frame>;
 
 namespace Multibody
 {
@@ -26,7 +27,7 @@ namespace Multibody
         private double _KinematicsResolution; // 运动学分辨率（秒）。
         private double _CacheSize; // 缓存大小（秒）。
         private Frame _InitialFrame; // 初始帧。
-        private Com.FixedQueue<Frame> _FrameHistory; // 历史帧队列。
+        private FrameQueue _FrameHistory; // 历史帧队列。
         private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器。
         private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器。
 
@@ -35,7 +36,7 @@ namespace Multibody
             Reset(dynamicsResolution, kinematicsResolution, cacheSize, particles);
         }
 
-        public MultibodySystem(double dynamicsResolution, double kinematicsResolution, double cacheSize, List<Particle> particles)
+        public MultibodySystem(double dynamicsResolution, double kinematicsResolution, double cacheSize, IEnumerable<Particle> particles)
         {
             Reset(dynamicsResolution, kinematicsResolution, cacheSize, particles);
         }
@@ -62,7 +63,7 @@ namespace Multibody
         public int FrameCount => _FrameHistory.Count;
 
         // 获取此 MultibodySystem 对象的动力学频率计数器。
-        public FrequencyCounter DynamicFrequencyCounter => _DynamicsFrequencyCounter;
+        public FrequencyCounter DynamicsFrequencyCounter => _DynamicsFrequencyCounter;
 
         // 获取此 MultibodySystem 对象的运动学频率计数器。
         public FrequencyCounter KinematicsFrequencyCounter => _KinematicsFrequencyCounter;
@@ -78,7 +79,7 @@ namespace Multibody
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < _KinematicsResolution)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
@@ -163,17 +164,17 @@ namespace Multibody
         {
             if (double.IsNaN(dynamicsResolution) || double.IsInfinity(dynamicsResolution) || dynamicsResolution <= 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             if (double.IsNaN(kinematicsResolution) || double.IsInfinity(kinematicsResolution) || kinematicsResolution < dynamicsResolution)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             if (double.IsNaN(cacheSize) || double.IsInfinity(cacheSize) || cacheSize < 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             if (particles == null/* || particles.Length <= 0*/)
@@ -187,41 +188,21 @@ namespace Multibody
             _KinematicsResolution = kinematicsResolution;
             _CacheSize = cacheSize;
             _InitialFrame = new Frame(0, particles);
-            _FrameHistory = new Com.FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
+            _FrameHistory = new FrameQueue(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution), false);
             _FrameHistory.Enqueue(_InitialFrame.Copy());
         }
 
         // 重新设置此 MultibodySystem 对象的参数与所有粒子。
-        public void Reset(double dynamicsResolution, double kinematicsResolution, double cacheSize, List<Particle> particles)
+        public void Reset(double dynamicsResolution, double kinematicsResolution, double cacheSize, IEnumerable<Particle> particles)
         {
-            if (double.IsNaN(dynamicsResolution) || double.IsInfinity(dynamicsResolution) || dynamicsResolution <= 0)
-            {
-                throw new ArgumentException();
-            }
-
-            if (double.IsNaN(kinematicsResolution) || double.IsInfinity(kinematicsResolution) || kinematicsResolution < dynamicsResolution)
-            {
-                throw new ArgumentException();
-            }
-
-            if (double.IsNaN(cacheSize) || double.IsInfinity(cacheSize) || cacheSize < 0)
-            {
-                throw new ArgumentException();
-            }
-
-            if (particles == null/* || particles.Count <= 0*/)
+            if (particles == null)
             {
                 throw new ArgumentNullException();
             }
 
             //
 
-            _DynamicsResolution = dynamicsResolution;
-            _KinematicsResolution = kinematicsResolution;
-            _CacheSize = cacheSize;
-            _InitialFrame = new Frame(0, particles);
-            _FrameHistory = new Com.FixedQueue<Frame>(cacheSize == 0 ? 1 : (int)Math.Ceiling(cacheSize / kinematicsResolution));
-            _FrameHistory.Enqueue(_InitialFrame.Copy());
+            Reset(dynamicsResolution, kinematicsResolution, cacheSize, particles.ToArray());
         }
     }
 }

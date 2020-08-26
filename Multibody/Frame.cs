@@ -31,7 +31,7 @@ namespace Multibody
         {
             if (double.IsNaN(time) || double.IsInfinity(time) || time < 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             if (particles == null/* || particles.Length <= 0*/)
@@ -44,17 +44,17 @@ namespace Multibody
             _Time = time;
             _Particles = new List<Particle>(particles.Length);
 
-            foreach (Particle particle in particles)
+            for (int i = 0; i < particles.Length; i++)
             {
-                _Particles.Add(particle.Copy());
+                _Particles.Add(particles[i].Copy());
             }
         }
 
-        public Frame(double time, List<Particle> particles)
+        public Frame(double time, IEnumerable<Particle> particles)
         {
             if (double.IsNaN(time) || double.IsInfinity(time) || time < 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             if (particles == null/* || particles.Count <= 0*/)
@@ -64,12 +64,14 @@ namespace Multibody
 
             //
 
-            _Time = time;
-            _Particles = new List<Particle>(particles.Count);
+            Particle[] particleArray = particles.ToArray();
 
-            foreach (Particle particle in particles)
+            _Time = time;
+            _Particles = new List<Particle>(particleArray.Length);
+
+            for (int i = 0; i < particleArray.Length; i++)
             {
-                _Particles.Add(particle.Copy());
+                _Particles.Add(particleArray[i].Copy());
             }
         }
 
@@ -90,7 +92,7 @@ namespace Multibody
         {
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException();
             }
 
             //
