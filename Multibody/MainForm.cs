@@ -105,7 +105,7 @@ namespace Multibody
             const int d = 37;
             int i = 0;
 
-            _Simulation = new Simulation(Panel_View, _RedrawMethod, _ViewCenter(), _ViewSize());
+            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewCenter(), _ViewSize());
 
             _Particles = new List<Particle>();
             _Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
@@ -162,19 +162,17 @@ namespace Multibody
 
             //
 
-            _Simulation.Start();
-
             foreach (Particle particle in _Particles)
             {
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.AddParticle) { RequestData = particle });
+                _InteractiveManager.AddParticle(particle);
             }
 
-            _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.SimulationStart));
+            _InteractiveManager.SimulationStart();
         }
 
         private void Me_Closed(object sender, EventArgs e)
         {
-            _Simulation.Stop();
+            _InteractiveManager.SimulationStop();
         }
 
         private void Me_Resize(object sender, EventArgs e)
@@ -186,10 +184,10 @@ namespace Multibody
 
             //
 
-            if (_Simulation.State == UIMessageProcessorState.Running)
+            if (_InteractiveManager.SimulationIsRunning)
             {
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateCoordinateOffset) { RequestData = _ViewCenter() });
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.UpdateBitmapSize) { RequestData = _ViewSize() });
+                _InteractiveManager.UpdateCoordinateOffset(_ViewCenter());
+                _InteractiveManager.UpdateBitmapSize(_ViewSize());
             }
         }
 
@@ -214,7 +212,8 @@ namespace Multibody
 
         #region 粒子与多体系统
 
-        private Simulation _Simulation; // 仿真对象。
+        private InteractiveManager _InteractiveManager; // 交互管理器。
+
         private List<Particle> _Particles; // 粒子列表。
 
         #endregion
@@ -258,7 +257,7 @@ namespace Multibody
                 ((Label)sender).BackColor = Me.RecommendColors.Button_INC.ToColor();
                 ((Label)sender).Cursor = Cursors.SizeWE;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
+                _InteractiveManager.ViewOperationStart();
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -271,7 +270,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
+                _InteractiveManager.ViewOperationStop();
 
                 ((Label)sender).BackColor = (Geometry.CursorIsInControl((Label)sender) ? Me.RecommendColors.Button_DEC.ToColor() : Me.RecommendColors.Background_INC.ToColor());
                 ((Label)sender).Cursor = Cursors.Default;
@@ -282,9 +281,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetX, off) } });
+                _InteractiveManager.ViewOperationOffsetX(off);
             }
         }
 
@@ -292,9 +291,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetY, off) } });
+                _InteractiveManager.ViewOperationOffsetY(off);
             }
         }
 
@@ -302,9 +301,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _Simulation.SpaceMag;
+                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetZ, off) } });
+                _InteractiveManager.ViewOperationOffsetZ(off);
             }
         }
 
@@ -314,7 +313,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateX, rot) } });
+                _InteractiveManager.ViewOperationRotateX(rot);
             }
         }
 
@@ -324,7 +323,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateY, rot) } });
+                _InteractiveManager.ViewOperationRotateY(rot);
             }
         }
 
@@ -334,7 +333,7 @@ namespace Multibody
             {
                 double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.RotateZ, rot) } });
+                _InteractiveManager.ViewOperationRotateZ(rot);
             }
         }
 
@@ -342,7 +341,7 @@ namespace Multibody
         {
             if (e.Button == MouseButtons.Left)
             {
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
+                _InteractiveManager.ViewOperationStart();
 
                 _CursorLocation = e.Location;
                 _AdjustNow = true;
@@ -355,7 +354,7 @@ namespace Multibody
             {
                 _AdjustNow = false;
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
+                _InteractiveManager.ViewOperationStop();
             }
         }
 
@@ -363,9 +362,9 @@ namespace Multibody
         {
             if (_AdjustNow)
             {
-                PointD off = new PointD((e.X - _CursorLocation.X) * _Simulation.SpaceMag, (e.Y - _CursorLocation.Y) * _Simulation.SpaceMag);
+                PointD off = new PointD((e.X - _CursorLocation.X) * _InteractiveManager.SpaceMag, (e.Y - _CursorLocation.Y) * _InteractiveManager.SpaceMag);
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetX, off.X), (Simulation.ViewOperationType.OffsetY, off.Y) } });
+                _InteractiveManager.ViewOperationOffsetXY(off);
             }
         }
 
@@ -373,16 +372,16 @@ namespace Multibody
         {
             if (!_AdjustNow)
             {
-                double off = _Simulation.SpaceMag;
+                double off = _InteractiveManager.SpaceMag;
 
                 if (e.Delta > 0)
                 {
                     off = -off;
                 }
 
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStart));
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationUpdateParam) { RequestData = new (Simulation.ViewOperationType, double)[] { (Simulation.ViewOperationType.OffsetZ, off) } });
-                _Simulation.PushMessage(new UIMessage((int)Simulation.MessageCode.ViewOperationStop));
+                _InteractiveManager.ViewOperationStart();
+                _InteractiveManager.ViewOperationOffsetZ(off);
+                _InteractiveManager.ViewOperationStop();
             }
         }
 

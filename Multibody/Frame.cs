@@ -22,10 +22,16 @@ namespace Multibody
     // 帧，表示若干粒子的瞬时状态。
     internal sealed class Frame
     {
-        private const double GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）。
+        private const double _GravitationalConstant = 6.67259E-11; // 万有引力常量（牛顿平方米/平方千克）。
+
+        private bool _Frozen; // 是否已冻结。
+
+        private long _DynamicsId; // 基于动力学的ID。
+        private long _KinematicsId; // 基于运动学的ID。
+        private long _GraphicsId; // 基于图形学的ID。
 
         private double _Time; // 相对时刻（秒）。
-        private List<Particle> _Particles; // 粒子列表。
+        private Particle[] _Particles; // 所有粒子。
 
         public Frame(double time, params Particle[] particles)
         {
@@ -34,19 +40,25 @@ namespace Multibody
                 throw new ArgumentOutOfRangeException();
             }
 
-            if (particles == null/* || particles.Length <= 0*/)
+            if (particles == null)
             {
                 throw new ArgumentNullException();
             }
 
             //
 
+            _Frozen = false;
+
+            _DynamicsId = 0;
+            _KinematicsId = 0;
+            _GraphicsId = 0;
+
             _Time = time;
-            _Particles = new List<Particle>(particles.Length);
+            _Particles = new Particle[particles.Length];
 
             for (int i = 0; i < particles.Length; i++)
             {
-                _Particles.Add(particles[i].Copy());
+                _Particles[i] = particles[i].Copy();
             }
         }
 
@@ -57,7 +69,7 @@ namespace Multibody
                 throw new ArgumentOutOfRangeException();
             }
 
-            if (particles == null/* || particles.Count <= 0*/)
+            if (particles == null)
             {
                 throw new ArgumentNullException();
             }
@@ -66,30 +78,97 @@ namespace Multibody
 
             Particle[] particleArray = particles.ToArray();
 
+            _Frozen = false;
+
+            _DynamicsId = 0;
+            _KinematicsId = 0;
+            _GraphicsId = 0;
+
             _Time = time;
-            _Particles = new List<Particle>(particleArray.Length);
+            _Particles = new Particle[particleArray.Length];
 
             for (int i = 0; i < particleArray.Length; i++)
             {
-                _Particles.Add(particleArray[i].Copy());
+                _Particles[i] = particleArray[i].Copy();
+            }
+        }
+
+        // 获取表示此 Frame 是否已冻结的布尔值。
+        public bool Frozen => _Frozen;
+
+        // 获取或设置此 Frame 对象基于动力学的 ID。
+        public long DynamicsId
+        {
+            get
+            {
+                return _DynamicsId;
+            }
+
+            set
+            {
+                _DynamicsId = value;
+            }
+        }
+
+        // 获取或设置此 Frame 对象基于运动学的 ID。
+        public long KinematicsId
+        {
+            get
+            {
+                return _KinematicsId;
+            }
+
+            set
+            {
+                _KinematicsId = value;
+            }
+        }
+
+        // 获取或设置此 Frame 对象基于图形学的 ID。
+        public long GraphicsId
+        {
+            get
+            {
+                return _GraphicsId;
+            }
+
+            set
+            {
+                _GraphicsId = value;
             }
         }
 
         // 获取此 Frame 对象的相对时刻（秒）。
         public double Time => _Time;
 
-        // 获取此 Frame 对象的所有粒子。
-        public List<Particle> Particles => _Particles;
+        // 获取此 Frame 对象的粒子数。
+        public int ParticleCount => _Particles.Length;
+
+        // 获取此 Frame 对象的指定粒子。
+        public Particle GetParticle(int index)
+        {
+            return _Particles[index];
+        }
 
         // 获取此 Frame 对象的副本。
         public Frame Copy()
         {
-            return new Frame(_Time, _Particles);
+            return new Frame(_Time, _Particles)
+            {
+                _DynamicsId = this._DynamicsId,
+                _KinematicsId = this._KinematicsId,
+                _GraphicsId = this._GraphicsId
+            };
         }
 
         // 将此 Frame 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)
         {
+            if (_Frozen)
+            {
+                throw new InvalidOperationException();
+            }
+
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0)
             {
                 throw new ArgumentOutOfRangeException();
@@ -99,41 +178,61 @@ namespace Multibody
 
             _Time += seconds;
 
-            foreach (Particle particle in _Particles)
+            if (_Particles.Length > 0)
             {
-                particle.RemoveForce();
-            }
-
-            for (int i = 0; i < _Particles.Count; i++)
-            {
-                for (int j = i + 1; j < _Particles.Count; j++)
+                for (int i = 0; i < _Particles.Length; i++)
                 {
-                    PointD3D distance = _Particles[j].Location - _Particles[i].Location;
+                    _Particles[i].RemoveForce();
+                }
 
-                    double distanceModule = distance.Module;
-
-                    if (distanceModule > 0)
+                for (int i = 0; i < _Particles.Length; i++)
+                {
+                    for (int j = i + 1; j < _Particles.Length; j++)
                     {
-                        double radiusSum = _Particles[i].Radius + _Particles[j].Radius;
-                        double dist = Math.Max(distanceModule, radiusSum);
-                        double distSquared = dist * dist;
+                        PointD3D distance = _Particles[j].Location - _Particles[i].Location;
 
-                        PointD3D force = (GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distSquared) * distance.Normalize;
+                        double distanceModule = distance.Module;
 
-                        if (distanceModule < radiusSum)
+                        if (distanceModule > 0)
                         {
-                            force *= distanceModule / radiusSum;
-                        }
+                            double radiusSum = _Particles[i].Radius + _Particles[j].Radius;
+                            double dist = Math.Max(distanceModule, radiusSum);
+                            double distSquared = dist * dist;
 
-                        _Particles[i].AddForce(force);
-                        _Particles[j].AddForce(force.Opposite);
+                            PointD3D force = (_GravitationalConstant * _Particles[i].Mass * _Particles[j].Mass / distSquared) * distance.Normalize;
+
+                            if (distanceModule < radiusSum)
+                            {
+                                force *= distanceModule / radiusSum;
+                            }
+
+                            _Particles[i].AddForce(force);
+                            _Particles[j].AddForce(force.Opposite);
+                        }
                     }
                 }
+
+                for (int i = 0; i < _Particles.Length; i++)
+                {
+                    _Particles[i].NextMoment(seconds);
+                }
+            }
+        }
+
+        public void Freeze()
+        {
+            if (_Frozen)
+            {
+                throw new InvalidOperationException();
             }
 
-            foreach (Particle particle in _Particles)
+            //
+
+            _Frozen = true;
+
+            for (int i = 0; i < _Particles.Length; i++)
             {
-                particle.NextMoment(seconds);
+                _Particles[i].Freeze();
             }
         }
     }
