@@ -27,8 +27,6 @@ using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
-using UIMessage = Com.WinForm.UIMessage;
-using UIMessageProcessorState = Com.WinForm.UIMessageProcessorState;
 
 namespace Multibody
 {
@@ -226,7 +224,7 @@ namespace Multibody
             return new Point(Panel_View.Width / 2, Panel_View.Height / 2);
         }
 
-        // 视图中心。
+        // 视图大小。
         private Size _ViewSize()
         {
             return new Size(Panel_View.Width, Me.CaptionBarHeight + Panel_View.Height);

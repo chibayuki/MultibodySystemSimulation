@@ -29,7 +29,6 @@ using Texting = Com.Text;
 using VectorType = Com.Vector.Type;
 using UIMessage = Com.WinForm.UIMessage;
 using UIMessageProcessor = Com.WinForm.UIMessageProcessor;
-using System.Diagnostics;
 
 namespace Multibody
 {
