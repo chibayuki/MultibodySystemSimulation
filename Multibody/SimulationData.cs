@@ -2,7 +2,7 @@
 Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.200818-0000
+Version 1.0.117.1000.M2.201101-1440
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using System.Threading;
 
 namespace Multibody
 {
@@ -27,22 +29,56 @@ namespace Multibody
 
         }
 
+        ~SimulationData()
+        {
+            _SimulationStateLock.Dispose();
+            _StaticDataLock.Dispose();
+            _ParticlesLock.Dispose();
+            _MultibodySystemLock.Dispose();
+            _GraphicsLock.Dispose();
+            _RenderLock.Dispose();
+        }
+
         #endregion
 
         #region 仿真
 
         private bool _SimulationIsRunning = false; // 是否正在运行仿真。
 
+        private ReaderWriterLockSlim _SimulationStateLock = new ReaderWriterLockSlim();
+
         public bool SimulationIsRunning
         {
             get
             {
-                return _SimulationIsRunning;
+                bool result = false;
+
+                _SimulationStateLock.EnterReadLock();
+
+                try
+                {
+                    result = _SimulationIsRunning;
+                }
+                finally
+                {
+                    _SimulationStateLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _SimulationIsRunning = value;
+                _SimulationStateLock.EnterWriteLock();
+
+                try
+                {
+                    _SimulationIsRunning = value;
+                }
+                finally
+                {
+                    _SimulationStateLock.ExitWriteLock();
+                }
             }
         }
 
@@ -55,16 +91,40 @@ namespace Multibody
         private double _CacheSize = 2000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度。
         private double _TrackLength = 1000000; // 轨迹长度（秒）。
 
+        private ReaderWriterLockSlim _StaticDataLock = new ReaderWriterLockSlim();
+
         public double DynamicsResolution
         {
             get
             {
-                return _DynamicsResolution;
+                double result = 0;
+
+                _StaticDataLock.EnterReadLock();
+
+                try
+                {
+                    result = _DynamicsResolution;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _DynamicsResolution = value;
+                _StaticDataLock.EnterWriteLock();
+
+                try
+                {
+                    _DynamicsResolution = value;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitWriteLock();
+                }
             }
         }
 
@@ -72,12 +132,34 @@ namespace Multibody
         {
             get
             {
-                return _KinematicsResolution;
+                double result = 0;
+
+                _StaticDataLock.EnterReadLock();
+
+                try
+                {
+                    result = _KinematicsResolution;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _KinematicsResolution = value;
+                _StaticDataLock.EnterWriteLock();
+
+                try
+                {
+                    _KinematicsResolution = value;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitWriteLock();
+                }
             }
         }
 
@@ -85,12 +167,34 @@ namespace Multibody
         {
             get
             {
-                return _CacheSize;
+                double result = 0;
+
+                _StaticDataLock.EnterReadLock();
+
+                try
+                {
+                    result = _CacheSize;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _CacheSize = value;
+                _StaticDataLock.EnterWriteLock();
+
+                try
+                {
+                    _CacheSize = value;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitWriteLock();
+                }
             }
         }
 
@@ -98,12 +202,34 @@ namespace Multibody
         {
             get
             {
-                return _TrackLength;
+                double result = 0;
+
+                _StaticDataLock.EnterReadLock();
+
+                try
+                {
+                    result = _TrackLength;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _TrackLength = value;
+                _StaticDataLock.EnterWriteLock();
+
+                try
+                {
+                    _TrackLength = value;
+                }
+                finally
+                {
+                    _StaticDataLock.ExitWriteLock();
+                }
             }
         }
 
@@ -111,8 +237,29 @@ namespace Multibody
 
         private List<Particle> _Particles = new List<Particle>(); // 粒子列表。
 
+        private ReaderWriterLockSlim _ParticlesLock = new ReaderWriterLockSlim();
+
         // 获取粒子数量。
-        public int ParticleCount => _Particles.Count;
+        public int ParticleCount
+        {
+            get
+            {
+                int result = 0;
+
+                _ParticlesLock.EnterReadLock();
+
+                try
+                {
+                    result = _Particles.Count;
+                }
+                finally
+                {
+                    _ParticlesLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 添加粒子。
         public void AddParticle(Particle particle)
@@ -124,7 +271,16 @@ namespace Multibody
 
             //
 
-            _Particles.Add(particle.Copy());
+            _ParticlesLock.EnterWriteLock();
+
+            try
+            {
+                _Particles.Add(particle.Copy());
+            }
+            finally
+            {
+                _ParticlesLock.ExitWriteLock();
+            }
         }
 
         // 删除粒子。
@@ -137,13 +293,35 @@ namespace Multibody
 
             //
 
-            _Particles.RemoveAt(index);
+            _ParticlesLock.EnterWriteLock();
+
+            try
+            {
+                _Particles.RemoveAt(index);
+            }
+            finally
+            {
+                _ParticlesLock.ExitWriteLock();
+            }
         }
 
         // 获取粒子。
         public Particle GetParticle(int index)
         {
-            return _Particles[index].Copy();
+            Particle result = null;
+
+            _ParticlesLock.EnterReadLock();
+
+            try
+            {
+                result = _Particles[index].Copy();
+            }
+            finally
+            {
+                _ParticlesLock.ExitReadLock();
+            }
+
+            return result;
         }
 
         // 设置粒子。
@@ -156,7 +334,16 @@ namespace Multibody
 
             //
 
-            _Particles[index] = particle.Copy();
+            _ParticlesLock.EnterWriteLock();
+
+            try
+            {
+                _Particles[index] = particle.Copy();
+            }
+            finally
+            {
+                _ParticlesLock.ExitWriteLock();
+            }
         }
 
         #endregion
@@ -165,47 +352,191 @@ namespace Multibody
 
         private MultibodySystem _MultibodySystem = null; // 多体系统。
 
+        private ReaderWriterLockSlim _MultibodySystemLock = new ReaderWriterLockSlim();
+
         // 获取多体系统的缓存是否已满。
-        public bool CacheIsFull => _MultibodySystem.CacheIsFull;
+        public bool CacheIsFull
+        {
+            get
+            {
+                bool result = false;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.CacheIsFull;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 获取多体系统当前已缓存的总帧数。
-        public int CachedFrameCount => _MultibodySystem.FrameCount;
+        public int CachedFrameCount
+        {
+            get
+            {
+                int result = 0;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.FrameCount;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 获取多体系统的最新一帧。
-        public Frame LatestFrame => _MultibodySystem.LatestFrame;
+        public Frame LatestFrame
+        {
+            get
+            {
+                Frame result = null;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.LatestFrame;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 获取多体系统当前的动力学频率。
-        public double DynamicsPFS => _MultibodySystem.DynamicsFrequencyCounter.Frequency;
+        public double DynamicsPFS
+        {
+            get
+            {
+                double result = 0;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.DynamicsFrequencyCounter.Frequency;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 获取多体系统当前的运动学频率。
-        public double KinematicsPFS => _MultibodySystem.KinematicsFrequencyCounter.Frequency;
+        public double KinematicsPFS
+        {
+            get
+            {
+                double result = 0;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.KinematicsFrequencyCounter.Frequency;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
 
         // 初始化多体系统。
         public void InitializeMultibodySystem()
         {
-            _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+            _MultibodySystemLock.EnterWriteLock();
+
+            try
+            {
+                _MultibodySystem = new MultibodySystem(_DynamicsResolution, _KinematicsResolution, _CacheSize, _Particles);
+            }
+            finally
+            {
+                _MultibodySystemLock.ExitWriteLock();
+            }
         }
 
         // 将多体系统运动指定的时长（秒）。
         public void NextMoment(double seconds)
         {
-            _MultibodySystem.NextMoment(seconds);
+            _MultibodySystemLock.EnterWriteLock();
+
+            try
+            {
+                _MultibodySystem.NextMoment(seconds);
+            }
+            finally
+            {
+                _MultibodySystemLock.ExitWriteLock();
+            }
         }
 
         // 将多体系统运动与轨迹分辨率相同的时长。
         public void NextMoment()
         {
-            _MultibodySystem.NextMoment();
+            _MultibodySystemLock.EnterWriteLock();
+
+            try
+            {
+                _MultibodySystem.NextMoment();
+            }
+            finally
+            {
+                _MultibodySystemLock.ExitWriteLock();
+            }
         }
 
         // 获取多体系统在指定时间区间内的快照。
         public Snapshot GetSnapshot(double startTime, double endTime)
         {
-            Snapshot snapshot = _MultibodySystem.GetSnapshot(startTime, endTime);
+            Snapshot snapshot = null;
+
+            _MultibodySystemLock.EnterReadLock();
+
+            try
+            {
+                snapshot = _MultibodySystem.GetSnapshot(startTime, endTime);
+            }
+            finally
+            {
+                _MultibodySystemLock.ExitReadLock();
+            }
 
             if (snapshot.FrameCount > 0)
             {
-                _MultibodySystem.DiscardCache(snapshot.OldestFrame.Time);
+                _MultibodySystemLock.EnterWriteLock();
+
+                try
+                {
+                    _MultibodySystem.DiscardCache(snapshot.OldestFrame.Time);
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitWriteLock();
+                }
             }
 
             return snapshot;
@@ -223,16 +554,40 @@ namespace Multibody
         internal const double InitialSpaceMag = 1; // 初始值。
         private double _SpaceMag = InitialSpaceMag; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
 
+        private ReaderWriterLockSlim _GraphicsLock = new ReaderWriterLockSlim();
+
         public double FocalLength
         {
             get
             {
-                return _FocalLength;
+                double result = 0;
+
+                _GraphicsLock.EnterReadLock();
+
+                try
+                {
+                    result = _FocalLength;
+                }
+                finally
+                {
+                    _GraphicsLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _FocalLength = value;
+                _GraphicsLock.EnterWriteLock();
+
+                try
+                {
+                    _FocalLength = value;
+                }
+                finally
+                {
+                    _GraphicsLock.ExitWriteLock();
+                }
             }
         }
 
@@ -240,12 +595,34 @@ namespace Multibody
         {
             get
             {
-                return _SpaceMag;
+                double result = 0;
+
+                _GraphicsLock.EnterReadLock();
+
+                try
+                {
+                    result = _SpaceMag;
+                }
+                finally
+                {
+                    _GraphicsLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _SpaceMag = value;
+                _GraphicsLock.EnterWriteLock();
+
+                try
+                {
+                    _SpaceMag = value;
+                }
+                finally
+                {
+                    _GraphicsLock.ExitWriteLock();
+                }
             }
         }
 
@@ -256,16 +633,40 @@ namespace Multibody
         internal const double InitialTimeMag = 100000; // 初始值。
         private double _TimeMag = InitialTimeMag; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
 
+        private ReaderWriterLockSlim _RenderLock = new ReaderWriterLockSlim();
+
         public double TimeMag
         {
             get
             {
-                return _TimeMag;
+                double result = 0;
+
+                _RenderLock.EnterReadLock();
+
+                try
+                {
+                    result = _TimeMag;
+                }
+                finally
+                {
+                    _RenderLock.ExitReadLock();
+                }
+
+                return result;
             }
 
             set
             {
-                _TimeMag = value;
+                _RenderLock.EnterWriteLock();
+
+                try
+                {
+                    _TimeMag = value;
+                }
+                finally
+                {
+                    _RenderLock.ExitWriteLock();
+                }
             }
         }
 

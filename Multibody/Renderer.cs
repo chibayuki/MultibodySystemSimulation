@@ -2,7 +2,7 @@
 Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.200817-0000
+Version 1.0.117.1000.M2.201101-1440
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -74,14 +74,12 @@ namespace Multibody
 
         protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
-            processCount = int.MaxValue;
-            discardUids = null;
+            base.SelectAsyncMessagesForThisLoop(messages, out processCount, out discardUids);
         }
 
         protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
-            processCount = int.MaxValue;
-            discardUids = null;
+            base.SelectSyncMessagesForThisLoop(messages, out processCount, out discardUids);
         }
 
         protected override void ProcessMessage(UIMessage message)
@@ -381,12 +379,13 @@ namespace Multibody
                         {
                             Font ft = new Font("微软雅黑", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
 
-                            Grap.DrawString("帧率:", ft, Br, new Point(5, bitmapSize.Height - 200));
-                            Grap.DrawString("    动力学(D): " + _SimulationData.DynamicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 180));
-                            Grap.DrawString("    运动学(K): " + _SimulationData.KinematicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 160));
-                            Grap.DrawString("    图形学(G): " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(5, bitmapSize.Height - 140));
+                            Grap.DrawString("帧率:", ft, Br, new Point(5, bitmapSize.Height - 220));
+                            Grap.DrawString("    动力学(D): " + _SimulationData.DynamicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 200));
+                            Grap.DrawString("    运动学(K): " + _SimulationData.KinematicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 180));
+                            Grap.DrawString("    图形学(G): " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(5, bitmapSize.Height - 160));
 
-                            Grap.DrawString("已缓存: " + _SimulationData.CachedFrameCount + " 帧", ft, Br, new Point(5, bitmapSize.Height - 100));
+                            Grap.DrawString("已缓存: " + _SimulationData.CachedFrameCount + " 帧", ft, Br, new Point(5, bitmapSize.Height - 120));
+                            Grap.DrawString("使用中: " + snapshot.FrameCount + " 帧", ft, Br, new Point(5, bitmapSize.Height - 100));
                             Grap.DrawString("最新帧: D " + _SimulationData.LatestFrame.DynamicsId + ", K " + _SimulationData.LatestFrame.KinematicsId, ft, Br, new Point(5, bitmapSize.Height - 80));
                             Grap.DrawString("当前帧: D " + latestFrame.DynamicsId + ", K " + latestFrame.KinematicsId + ", G " + latestFrame.GraphicsId, ft, Br, new Point(5, bitmapSize.Height - 60));
 

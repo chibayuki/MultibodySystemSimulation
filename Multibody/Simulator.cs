@@ -2,7 +2,7 @@
 Copyright © 2020 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.0.0.DEV.200817-0000
+Version 1.0.117.1000.M2.201101-1440
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -38,14 +38,12 @@ namespace Multibody
 
         protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
-            processCount = int.MaxValue;
-            discardUids = null;
+            base.SelectAsyncMessagesForThisLoop(messages, out processCount, out discardUids);
         }
 
         protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
         {
-            processCount = int.MaxValue;
-            discardUids = null;
+            base.SelectSyncMessagesForThisLoop(messages, out processCount, out discardUids);
         }
 
         protected override void ProcessMessage(UIMessage message)
