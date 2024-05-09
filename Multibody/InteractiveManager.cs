@@ -163,6 +163,9 @@ namespace Multibody
 
         //
 
+        // 获取粒子数量。
+        public int ParticleCount => _SimulationData.ParticleCount;
+
         // 添加粒子。
         public void AddParticle(Particle particle)
         {

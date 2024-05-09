@@ -129,15 +129,6 @@
   <metadata name="Label_HelpMessage.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>
   </metadata>
-  <metadata name="Label_PressedKey.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>True</value>
-  </metadata>
-  <metadata name="Label_PressedKey.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>True</value>
-  </metadata>
-  <metadata name="Label_HelpMessage.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>True</value>
-  </metadata>
   <data name="Label_HelpMessage.Text" xml:space="preserve">
     <value>[默认] 拖动: 沿 x, y 轴移动 / 滚轮: 沿 z 轴移动
 [按下 X] 拖动/滚轮: 沿 x 轴移动
@@ -148,6 +139,9 @@
 [按下 R+Y] 拖动/滚轮: 绕 y 轴旋转
 [按下 R+Z] 拖动/滚轮: 绕 z 轴旋转</value>
   </data>
+  <metadata name="Label_PressedKey.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+    <value>True</value>
+  </metadata>
   <metadata name="$this.Locked" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>
   </metadata>

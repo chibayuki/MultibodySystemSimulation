@@ -252,6 +252,9 @@ namespace Multibody
         // 世界坐标系转换到屏幕坐标系。
         private PointD _WorldToScreen(PointD3D pt) => pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
 
+        // 世界坐标系中的坐标到屏幕坐标系的距离。
+        private double _DistanceToScreen(PointD3D pt) => pt.AffineTransformCopy(_AffineTransformation).Z;
+
         #endregion
 
         #region 渲染
@@ -339,13 +342,14 @@ namespace Multibody
 
                         for (int i = 0; i < particleCount; i++)
                         {
-                            PointD location = _WorldToScreen(latestFrame.GetParticle(i).Location);
+                            Particle particle = latestFrame.GetParticle(i);
+                            PointD location = _WorldToScreen(particle.Location);
 
-                            float radius = Math.Max(1, (float)(latestFrame.GetParticle(i).Radius * _FocalLength / latestFrame.GetParticle(i).Location.Z));
+                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / _DistanceToScreen(particle.Location)));
 
                             if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                             {
-                                using (Brush Br = new SolidBrush(latestFrame.GetParticle(i).Color))
+                                using (Brush Br = new SolidBrush(particle.Color))
                                 {
                                     grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
                                 }
@@ -373,9 +377,38 @@ namespace Multibody
             }
             else
             {
-                if (_SimulationData.ParticleCount > 0)
-                {
+                int particleCount = _SimulationData.ParticleCount;
 
+                if (particleCount > 0)
+                {
+                    using (Graphics grap = Graphics.FromImage(bitmap))
+                    {
+                        grap.SmoothingMode = SmoothingMode.AntiAlias;
+                        grap.Clear(_RedrawControl.BackColor);
+
+                        RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
+
+                        for (int i = 0; i < particleCount; i++)
+                        {
+                            Particle particle = _SimulationData.GetParticle(i);
+                            PointD location = _WorldToScreen(particle.Location);
+
+                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / _DistanceToScreen(particle.Location)));
+
+                            if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
+                            {
+                                using (Brush Br = new SolidBrush(particle.Color))
+                                {
+                                    grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
+                                }
+                            }
+                        }
+
+                        using (Brush br = new SolidBrush(Color.Silver))
+                        {
+                            grap.DrawString($"帧率: {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
+                        }
+                    }
                 }
             }
 

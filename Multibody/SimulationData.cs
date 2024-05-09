@@ -26,7 +26,6 @@ namespace Multibody
 
         public SimulationData()
         {
-
         }
 
         ~SimulationData()

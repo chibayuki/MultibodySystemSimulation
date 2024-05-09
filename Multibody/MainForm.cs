@@ -27,7 +27,6 @@ using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
-using System.Runtime.CompilerServices;
 
 namespace Multibody
 {
@@ -56,20 +55,20 @@ namespace Multibody
                 ThemeColor = ColorManipulation.GetRandomColorX(),
             };
 
-            FormManager.Loading += FormLoading;
-            FormManager.Loaded += FormLoaded;
-            FormManager.Closed += FormClosed;
-            FormManager.Resize += FormResize;
-            FormManager.SizeChanged += FormSizeChanged;
-            FormManager.ThemeChanged += FormThemeChanged;
-            FormManager.ThemeColorChanged += FormThemeChanged;
+            FormManager.Loading += Form_Loading;
+            FormManager.Loaded += Form_Loaded;
+            FormManager.Closed += Form_Closed;
+            FormManager.Resize += Form_Resize;
+            FormManager.SizeChanged += Form_SizeChanged;
+            FormManager.ThemeChanged += Form_ThemeChanged;
+            FormManager.ThemeColorChanged += Form_ThemeChanged;
         }
 
         #endregion
 
         #region 窗口事件回调
 
-        private void FormLoading(object sender, EventArgs e)
+        private void Form_Loading(object sender, EventArgs e)
         {
             int h = Statistics.RandomInteger(360);
             const int s = 100;
@@ -77,7 +76,7 @@ namespace Multibody
             const int d = 37;
             int i = 0;
 
-            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewCenter(), _ViewSize());
+            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewCenter, _ViewSize);
 
             _Particles = new List<Particle>()
             {
@@ -87,7 +86,7 @@ namespace Multibody
             };
         }
 
-        private void FormLoaded(object sender, EventArgs e)
+        private void Form_Loaded(object sender, EventArgs e)
         {
             FormManager.OnThemeChanged();
             FormManager.OnSizeChanged();
@@ -113,33 +112,23 @@ namespace Multibody
             _InteractiveManager.SimulationStart();
         }
 
-        private void FormClosed(object sender, EventArgs e)
+        private void Form_Closed(object sender, EventArgs e)
         {
             _InteractiveManager.SimulationStop();
         }
 
-        private void FormResize(object sender, EventArgs e)
+        private void Form_Resize(object sender, EventArgs e)
         {
-            Panel_SideBar.Height = Panel_Main.Height;
-            Panel_SideBar.Left = Panel_Main.Width - Panel_SideBar.Width;
-
-            Panel_View.Size = Panel_Main.Size;
-
-            //
-
-            if (_InteractiveManager.SimulationIsRunning)
-            {
-                _InteractiveManager.UpdateCoordinateOffset(_ViewCenter());
-                _InteractiveManager.UpdateBitmapSize(_ViewSize());
-            }
+            _InteractiveManager.UpdateCoordinateOffset(_ViewCenter);
+            _InteractiveManager.UpdateBitmapSize(_ViewSize);
         }
 
-        private void FormSizeChanged(object sender, EventArgs e)
+        private void Form_SizeChanged(object sender, EventArgs e)
         {
             FormManager.OnResize();
         }
 
-        private void FormThemeChanged(object sender, EventArgs e)
+        private void Form_ThemeChanged(object sender, EventArgs e)
         {
             this.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
@@ -163,11 +152,11 @@ namespace Multibody
 
         #region 视图控制
 
-        // 视图中心。
-        private Point _ViewCenter() => new Point(Panel_View.Width / 2, (FormManager.CaptionBarHeight + Panel_View.Height) / 2);
-
         // 视图大小。
-        private Size _ViewSize() => new Size(Panel_View.Width, FormManager.CaptionBarHeight + Panel_View.Height);
+        private Size _ViewSize => new Size(Panel_View.Width, FormManager.CaptionBarHeight + Panel_View.Height);
+
+        // 视图中心。
+        private Point _ViewCenter => new Point(Panel_View.Width / 2, (FormManager.CaptionBarHeight + Panel_View.Height) / 2);
 
         //
 
@@ -198,6 +187,10 @@ namespace Multibody
                 else if (_PressedKeys.Contains(Keys.Z))
                 {
                     Label_PressedKey.Text = "Δz";
+                }
+                else if (_PressedKeys.Contains(Keys.R))
+                {
+                    Label_PressedKey.Text = "R+?";
                 }
                 else
                 {
@@ -332,7 +325,7 @@ namespace Multibody
                         }
                         else if (_PressedKeys.Contains(Keys.Z))
                         {
-                            PointD viewCenter = _ViewCenter();
+                            PointD viewCenter = _ViewCenter;
                             double rot = ((e.X, e.Y) - viewCenter).Azimuth - (_MouseDownLocation - viewCenter).Azimuth;
                             _InteractiveManager.ViewOperationRotateZ(rot);
                         }
