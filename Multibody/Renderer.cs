@@ -172,6 +172,9 @@ namespace Multibody
 
         private AffineTransformation _AffineTransformation = AffineTransformation.Empty; // 当前使用的仿射变换。
         private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
+        private AffineTransformation _InverseAffineTransformation = AffineTransformation.Empty; // 当前使用的仿射变换的逆变换。
+
+        private FrequencyCounter _TransformFrequencyCounter = new FrequencyCounter(); // 仿射变换的频率计数器。
 
         //
 
@@ -239,6 +242,7 @@ namespace Multibody
                 }
 
                 _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
+                _InverseAffineTransformation = _AffineTransformation.InverseTransformCopy();
             }
         }
 
@@ -246,13 +250,13 @@ namespace Multibody
 
         private Point _CoordinateOffset; // 坐标系偏移。
 
-        // 更新坐标系偏移。
+        // 更新坐标系偏移（用途：绘图时使原点位于视图中心）。
         private void _UpdateCoordinateOffset(Point coordinateOffset) => _CoordinateOffset = coordinateOffset;
 
-        // 世界坐标系转换到屏幕坐标系。
+        // 世界坐标系转换到屏幕坐标系（并叠加绘图偏移）。
         private PointD _WorldToScreen(PointD3D pt) => pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
 
-        // 世界坐标系中的坐标到屏幕坐标系的距离。
+        // 世界坐标系中的坐标到屏幕的距离。
         private double _DistanceToScreen(PointD3D pt) => pt.AffineTransformCopy(_AffineTransformation).Z;
 
         #endregion
@@ -282,6 +286,79 @@ namespace Multibody
 
         private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
 
+        // 绘制坐标系网格。
+        private void _DrawGrid(Bitmap bitmap)
+        {
+            // 坐标系网格在视图内的可见部分，在世界坐标系中是一个顶点位于视图中心（或者，当不考虑绘图偏移时为原点）、高度无限大的四棱锥，
+            // 其任一横截面与视图矩形相似，棱的斜率与投影变换的焦距成反比；考虑该四棱锥从顶点起、高度有限大的部分，
+            // 将5个顶点逆变换到世界坐标系，再取其外接长方体，可容易地得到该长方体内与X、Y、Z坐标轴平行的直线段族，
+            // 将这些线段放射变换到屏幕坐标系，并取其可见部分，即可用于绘制坐标系网格。
+
+            PointD3D[] pts = new PointD3D[] {
+                PointD3D.Zero,
+                new PointD3D(-_BitmapSize.Width / 2, -_BitmapSize.Height / 2, _FocalLength),
+                new PointD3D(-_BitmapSize.Width / 2, _BitmapSize.Height / 2, _FocalLength),
+                new PointD3D(_BitmapSize.Width / 2, _BitmapSize.Height / 2, _FocalLength),
+                new PointD3D(_BitmapSize.Width / 2, -_BitmapSize.Height / 2, _FocalLength)
+            };
+            const double deep = 3; // 绘制坐标系网格的最远距离是焦距的几倍
+            for (int i = 0; i < pts.Length; i++)
+            {
+                pts[i] = (pts[i] * deep).ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
+            }
+
+            double minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
+            for (int i = 0; i < pts.Length; i++)
+            {
+                if (i == 0)
+                {
+                    minX = maxX = pts[i].X;
+                    minY = maxY = pts[i].Y;
+                    minZ = maxZ = pts[i].Z;
+                }
+                else
+                {
+                    minX = Math.Min(minX, pts[i].X);
+                    maxX = Math.Max(maxX, pts[i].X);
+                    minY = Math.Min(minY, pts[i].Y);
+                    maxY = Math.Max(maxY, pts[i].Y);
+                    minZ = Math.Min(minZ, pts[i].Z);
+                    maxZ = Math.Max(maxZ, pts[i].Z);
+                }
+            }
+
+            double delta = 500 * _SpaceMag; // 绘制坐标系网格的间距。
+            minX = Math.Floor(minX / delta) * delta;
+            maxX = Math.Floor(maxX / delta) * delta;
+            minY = Math.Floor(minY / delta) * delta;
+            maxY = Math.Floor(maxY / delta) * delta;
+            minZ = Math.Floor(minZ / delta) * delta;
+            maxZ = Math.Floor(maxZ / delta) * delta;
+
+            int n = 0;
+            for (double x = minX; x <= maxX; x += delta)
+            {
+                for (double y = minY; y <= maxY; y += delta)
+                {
+                    for (double z = minZ; z <= maxZ; z += delta)
+                    {
+                        PointD pt0 = _WorldToScreen(new PointD3D(x, y, z));
+                        PointD pt1 = _WorldToScreen(new PointD3D(x + delta, y, z));
+                        PointD pt2 = _WorldToScreen(new PointD3D(x, y + delta, z));
+                        PointD pt3 = _WorldToScreen(new PointD3D(x, y, z + delta));
+                        Color cr = Color.FromArgb((int)Math.Max(0, Math.Min(255, 255 * (1 - Math.Max(0, _DistanceToScreen(new PointD3D(x, y, z))) / _FocalLength / deep))), 64, 64, 64);
+                        n += 5;
+
+                        Painting2D.PaintLine(bitmap, pt0, pt1, cr, 1, true);
+                        Painting2D.PaintLine(bitmap, pt0, pt2, cr, 1, true);
+                        Painting2D.PaintLine(bitmap, pt0, pt3, cr, 1, true);
+                    }
+                }
+            }
+
+            _TransformFrequencyCounter.Update(n);
+        }
+
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
         {
@@ -290,34 +367,36 @@ namespace Multibody
 
             Bitmap bitmap = new Bitmap(Math.Max(1, bitmapWidth), Math.Max(1, bitmapHeight));
 
-            if (_SimulationIsRunning)
+            using (Graphics grap = Graphics.FromImage(bitmap))
             {
-                DateTime lastGenerateTime;
+                grap.SmoothingMode = SmoothingMode.AntiAlias;
+                grap.Clear(_RedrawControl.BackColor);
 
-                if (_LastGenerateTime == DateTime.MinValue)
+                _DrawGrid(bitmap);
+
+                if (_SimulationIsRunning)
                 {
-                    lastGenerateTime = DateTime.Now;
-                }
-                else
-                {
-                    lastGenerateTime = _LastGenerateTime;
-                }
+                    DateTime lastGenerateTime;
 
-                _LastGenerateTime = DateTime.Now;
-
-                double time = _LastSnapshotTime + (DateTime.Now - lastGenerateTime).TotalSeconds * _TimeMag;
-
-                Snapshot snapshot = _SimulationData.GetSnapshot(time - _SimulationData.TrackLength, time);
-
-                _LastSnapshotTime = snapshot.LatestFrame.Time;
-
-                if (snapshot != null && snapshot.FrameCount > 0)
-                {
-                    using (Graphics grap = Graphics.FromImage(bitmap))
+                    if (_LastGenerateTime == DateTime.MinValue)
                     {
-                        grap.SmoothingMode = SmoothingMode.AntiAlias;
-                        grap.Clear(_RedrawControl.BackColor);
+                        lastGenerateTime = DateTime.Now;
+                    }
+                    else
+                    {
+                        lastGenerateTime = _LastGenerateTime;
+                    }
 
+                    _LastGenerateTime = DateTime.Now;
+
+                    double time = _LastSnapshotTime + (DateTime.Now - lastGenerateTime).TotalSeconds * _TimeMag;
+
+                    Snapshot snapshot = _SimulationData.GetSnapshot(time - _SimulationData.TrackLength, time);
+
+                    _LastSnapshotTime = snapshot.LatestFrame.Time;
+
+                    if (snapshot != null && snapshot.FrameCount > 0)
+                    {
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
                         Frame latestFrame = snapshot.LatestFrame;
@@ -333,10 +412,7 @@ namespace Multibody
                                 PointD pt1 = _WorldToScreen(snapshot.GetFrame(j).GetParticle(i).Location);
                                 PointD pt2 = _WorldToScreen(snapshot.GetFrame(j - 1).GetParticle(i).Location);
 
-                                if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
-                                {
-                                    Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / frameCount, latestFrame.GetParticle(i).Color), 1, true);
-                                }
+                                Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / frameCount, latestFrame.GetParticle(i).Color), 1, true);
                             }
                         }
 
@@ -356,36 +432,33 @@ namespace Multibody
                             }
                         }
 
+                        _TransformFrequencyCounter.Update(particleCount * 3);
+
                         using (Brush br = new SolidBrush(Color.Silver))
                         {
-                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 220));
-                            grap.DrawString($"    动力学(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
-                            grap.DrawString($"    运动学(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
-                            grap.DrawString($"    图形学(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
+                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 240));
+                            grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
+                            grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
+                            grap.DrawString($"    仿射变换(T): {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
+                            grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
 
-                            grap.DrawString($"已缓存: {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
-                            grap.DrawString($"使用中: {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
+                            grap.DrawString($"已缓存(K): {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
+                            grap.DrawString($"使用中(K): {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
                             grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, br, new Point(5, bitmapHeight - 80));
                             grap.DrawString($"当前帧: D {latestFrame.DynamicsId}, K {latestFrame.KinematicsId}, G {latestFrame.GraphicsId}", _Font, br, new Point(5, bitmapHeight - 60));
 
                             grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, br, new Point(5, bitmapHeight - 20));
                         }
+
+                        _GenerateCount++;
                     }
-
-                    _GenerateCount++;
                 }
-            }
-            else
-            {
-                int particleCount = _SimulationData.ParticleCount;
-
-                if (particleCount > 0)
+                else
                 {
-                    using (Graphics grap = Graphics.FromImage(bitmap))
-                    {
-                        grap.SmoothingMode = SmoothingMode.AntiAlias;
-                        grap.Clear(_RedrawControl.BackColor);
+                    int particleCount = _SimulationData.ParticleCount;
 
+                    if (particleCount > 0)
+                    {
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
                         for (int i = 0; i < particleCount; i++)
@@ -403,6 +476,8 @@ namespace Multibody
                                 }
                             }
                         }
+
+                        _TransformFrequencyCounter.Update(particleCount * 2);
 
                         using (Brush br = new SolidBrush(Color.Silver))
                         {
@@ -431,11 +506,6 @@ namespace Multibody
 
             _FrameRateCounter.Update();
         }
-
-        //
-
-        // 获取当前的重绘刷新率（图形学频率）。
-        public double GraphicsFPS => _FrameRateCounter.Frequency;
 
         #endregion
     }

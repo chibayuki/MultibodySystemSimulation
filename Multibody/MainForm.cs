@@ -21,7 +21,6 @@ using System.Windows.Forms;
 
 using ColorManipulation = Com.ColorManipulation;
 using ColorX = Com.ColorX;
-using Geometry = Com.Geometry;
 using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;

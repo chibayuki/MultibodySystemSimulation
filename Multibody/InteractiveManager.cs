@@ -329,12 +329,5 @@ namespace Multibody
         }
 
         #endregion
-
-        #region 重绘
-
-        // 获取当前的重绘刷新率（图形学频率）。
-        public double GraphicsFPS => _Renderer.GraphicsFPS;
-
-        #endregion
     }
 }
