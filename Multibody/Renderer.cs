@@ -40,7 +40,7 @@ namespace Multibody
 
         #region 构造函数
 
-        public Renderer(SimulationData simulationData, Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize) : base()
+        public Renderer(SimulationData simulationData, Control redrawControl, Action<Bitmap> redrawMethod, Size viewSize) : base()
         {
             if (simulationData is null || redrawControl is null || redrawMethod is null)
             {
@@ -53,8 +53,7 @@ namespace Multibody
 
             _RedrawControl = redrawControl;
             _RedrawMethod = redrawMethod;
-            _CoordinateOffset = coordinateOffset;
-            _BitmapSize = bitmapSize;
+            _ViewSize = viewSize;
 
             _UpdateGridDistance();
         }
@@ -76,10 +75,9 @@ namespace Multibody
             ViewOperationUpdateParam,
             ViewOperationStop,
 
-            UpdateCoordinateOffset,
+            UpdateViewSize,
 
-            SetTimeMag,
-            UpdateBitmapSize
+            SetTimeMag
         }
 
         protected override void ProcessMessage(UIMessage message)
@@ -120,18 +118,14 @@ namespace Multibody
 
                 //
 
-                case (int)MessageCode.UpdateCoordinateOffset:
-                    _UpdateCoordinateOffset((Point)message.RequestData);
+                case (int)MessageCode.UpdateViewSize:
+                    _UpdateViewSize((Size)message.RequestData);
                     break;
 
                 //
 
                 case (int)MessageCode.SetTimeMag:
                     _SetTimeMag((double)message.RequestData);
-                    break;
-
-                case (int)MessageCode.UpdateBitmapSize:
-                    _UpdateBitmapSize((Size)message.RequestData);
                     break;
             }
         }
@@ -184,34 +178,13 @@ namespace Multibody
         private double _FocalLength = SimulationData.InitialFocalLength; // 投影变换使用的焦距。
 
         private double _SpaceMag = SimulationData.InitialSpaceMag; // 空间倍率（米/像素），指投影变换焦点附近每像素表示的长度。
-        private double _GridDistance = 500 * SimulationData.InitialSpaceMag; // 绘制坐标系网格的间距。
 
         private void _SetFocalLength(double focalLength)
         {
             _FocalLength = focalLength;
             _SimulationData.FocalLength = focalLength;
-        }
 
-        private void _UpdateGridDistance()
-        {
-            Real gridDist = 500 * _SpaceMag;
-            if (gridDist.Value > 1 && gridDist.Value < 1.5)
-            {
-                gridDist.Value = 1;
-            }
-            else if (gridDist.Value >= 1.5 && gridDist.Value < 3.5)
-            {
-                gridDist.Value = 2;
-            }
-            else if (gridDist.Value >= 3.5 && gridDist.Value < 7.5)
-            {
-                gridDist.Value = 5;
-            }
-            else if (gridDist.Value >= 7.5)
-            {
-                gridDist.Value = 10;
-            }
-            _GridDistance = (double)gridDist;
+            _DisposeGridBitmap();
         }
 
         private void _SetSpaceMag(double spaceMag)
@@ -220,6 +193,8 @@ namespace Multibody
             _SimulationData.SpaceMag = spaceMag;
 
             _UpdateGridDistance();
+
+            _DisposeGridBitmap();
         }
 
         //
@@ -270,23 +245,30 @@ namespace Multibody
                 }
 
                 _AffineTransformation = affineTransformation.CompressCopy(VectorType.ColumnVector, 3);
-                _InverseAffineTransformation = _AffineTransformation.InverseTransformCopy();
+                _InverseAffineTransformation = _AffineTransformation.InverseTransformCopy().CompressCopy(VectorType.ColumnVector, 3);
+
+                _DisposeGridBitmap();
             }
         }
 
         //
 
-        private Point _CoordinateOffset; // 坐标系偏移。
+        private Size _ViewSize; // 视图大小。
 
-        // 更新坐标系偏移（用途：绘图时使原点位于视图中心）。
-        private void _UpdateCoordinateOffset(Point coordinateOffset) => _CoordinateOffset = coordinateOffset;
+        // 更新视图大小。
+        private void _UpdateViewSize(Size viewSize)
+        {
+            _ViewSize = viewSize;
 
-        // 世界坐标系转换到屏幕坐标系（并叠加绘图偏移），输出世界坐标系中的坐标到屏幕的距离。
+            _DisposeGridBitmap();
+        }
+
+        // 世界坐标系转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
         private PointD _WorldToScreen(PointD3D pt, out double z)
         {
             pt.AffineTransform(_AffineTransformation);
             z = pt.Z;
-            return pt.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
+            return pt.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
         }
 
         #endregion
@@ -295,6 +277,7 @@ namespace Multibody
 
         private double _TimeMag = SimulationData.InitialTimeMag; // 时间倍率（秒/秒），指仿真时间流逝速度与真实时间流逝速度的比值，表现为动画的播放速度。
 
+        // 更新时间倍率。
         private void _SetTimeMag(double timeMag)
         {
             _TimeMag = timeMag;
@@ -303,120 +286,167 @@ namespace Multibody
 
         //
 
-        private Size _BitmapSize; // 位图大小。
+        private double _GridDistance = 500 * SimulationData.InitialSpaceMag; // 绘制坐标系网格的间距（米）。
 
-        // 更新位图大小。
-        private void _UpdateBitmapSize(Size bitmapSize) => _BitmapSize = bitmapSize;
+        // 更新坐标系网格间距。
+        private void _UpdateGridDistance()
+        {
+            Real gridDist = 500 * _SpaceMag;
 
-        //
+            if (gridDist.Value > 1 && gridDist.Value < 1.5)
+            {
+                gridDist.Value = 1;
+            }
+            else if (gridDist.Value >= 1.5 && gridDist.Value < 3.5)
+            {
+                gridDist.Value = 2;
+            }
+            else if (gridDist.Value >= 3.5 && gridDist.Value < 7.5)
+            {
+                gridDist.Value = 5;
+            }
+            else if (gridDist.Value >= 7.5)
+            {
+                gridDist.Value = 10;
+            }
 
-        private DateTime _LastGenerateTime = DateTime.MinValue; // 最近一次渲染位图的日期时间。
-        private double _LastSnapshotTime = 0; // 最近一次获取快照的最新一帧的时刻。
-        private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
+            _GridDistance = (double)gridDist;
+        }
 
-        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
+        Bitmap _GridBitmap = null; // 坐标系网格位图。
 
-        // 绘制坐标系网格。
-        private void _DrawGrid(Bitmap bitmap)
+        // 删除坐标系网格位图。
+        private void _DisposeGridBitmap()
+        {
+            if (_GridBitmap != null)
+            {
+                _GridBitmap.Dispose();
+                _GridBitmap = null;
+            }
+        }
+
+        // 更新坐标系网格位图。
+        private void _UpdateGridBitmap()
         {
             // 坐标系网格在视图内的可见部分，在世界坐标系中是一个顶点位于视图中心（或者，当不考虑绘图偏移时为原点）、高度无限大的四棱锥，
             // 其任一横截面与视图矩形相似，棱的斜率与投影变换的焦距成反比；考虑该四棱锥从顶点起、高度有限大的部分，
             // 将5个顶点逆变换到世界坐标系，再取其外接长方体，可容易地得到该长方体内与X、Y、Z坐标轴平行的直线段族，
             // 将这些线段放射变换到屏幕坐标系，并取其可见部分，即可用于绘制坐标系网格。
 
-            PointD3D[] pts = new PointD3D[] {
-                PointD3D.Zero,
-                new PointD3D(-_BitmapSize.Width / 2, -_BitmapSize.Height / 2, _FocalLength),
-                new PointD3D(-_BitmapSize.Width / 2, _BitmapSize.Height / 2, _FocalLength),
-                new PointD3D(_BitmapSize.Width / 2, _BitmapSize.Height / 2, _FocalLength),
-                new PointD3D(_BitmapSize.Width / 2, -_BitmapSize.Height / 2, _FocalLength)
-            };
-            const double gridDepth = 4; // 绘制坐标系网格的最远距离是焦距的几倍
-            for (int i = 0; i < pts.Length; i++)
+            if (_GridBitmap is null)
             {
-                pts[i] = (pts[i] * gridDepth).ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
-            }
+                int bitmapWidth = _ViewSize.Width;
+                int bitmapHeight = _ViewSize.Height;
 
-            double minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
-            for (int i = 0; i < pts.Length; i++)
-            {
-                if (i == 0)
-                {
-                    minX = maxX = pts[i].X;
-                    minY = maxY = pts[i].Y;
-                    minZ = maxZ = pts[i].Z;
-                }
-                else
-                {
-                    minX = Math.Min(minX, pts[i].X);
-                    maxX = Math.Max(maxX, pts[i].X);
-                    minY = Math.Min(minY, pts[i].Y);
-                    maxY = Math.Max(maxY, pts[i].Y);
-                    minZ = Math.Min(minZ, pts[i].Z);
-                    maxZ = Math.Max(maxZ, pts[i].Z);
-                }
-            }
+                _GridBitmap = new Bitmap(Math.Max(1, bitmapWidth), Math.Max(1, bitmapHeight));
 
-            minX = Math.Floor(minX / _GridDistance) * _GridDistance;
-            maxX = Math.Floor(maxX / _GridDistance) * _GridDistance;
-            minY = Math.Floor(minY / _GridDistance) * _GridDistance;
-            maxY = Math.Floor(maxY / _GridDistance) * _GridDistance;
-            minZ = Math.Floor(minZ / _GridDistance) * _GridDistance;
-            maxZ = Math.Floor(maxZ / _GridDistance) * _GridDistance;
-
-            int transformNum = 0;
-            for (double x = minX; x <= maxX; x += _GridDistance)
-            {
-                for (double y = minY; y <= maxY; y += _GridDistance)
+                using (Graphics grap = Graphics.FromImage(_GridBitmap))
                 {
-                    for (double z = minZ; z <= maxZ; z += _GridDistance)
+                    grap.SmoothingMode = SmoothingMode.AntiAlias;
+                    grap.Clear(_RedrawControl.BackColor);
+
+                    double gridDepth = 5000; // 绘制坐标系网格的最远距离（像素）
+                    PointD3D[] pts;
+                    if (_FocalLength > 0)
                     {
-                        PointD pt0 = _WorldToScreen(new PointD3D(x, y, z), out double ptZ);
-                        PointD pt1 = _WorldToScreen(new PointD3D(x + _GridDistance, y, z), out _);
-                        PointD pt2 = _WorldToScreen(new PointD3D(x, y + _GridDistance, z), out _);
-                        PointD pt3 = _WorldToScreen(new PointD3D(x, y, z + _GridDistance), out _);
-                        transformNum += 4;
-                        int alpha;
-                        if (ptZ <= _FocalLength)
+                        pts = new PointD3D[] {
+                            PointD3D.Zero,
+                            new PointD3D(-bitmapWidth, -bitmapHeight, _FocalLength * 2 / _SpaceMag) / 2,
+                            new PointD3D(-bitmapWidth, bitmapHeight, _FocalLength * 2 / _SpaceMag) / 2,
+                            new PointD3D(bitmapWidth, bitmapHeight, _FocalLength * 2 / _SpaceMag) / 2,
+                            new PointD3D(bitmapWidth, -bitmapHeight, _FocalLength * 2 / _SpaceMag) / 2
+                        };
+                        for (int i = 0; i < pts.Length; i++)
                         {
-                            alpha = 255;
+                            pts[i] = (pts[i] * gridDepth / (_FocalLength / _SpaceMag)).ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
+                        }
+                    }
+                    else
+                    {
+                        pts = new PointD3D[] {
+                            PointD3D.Zero,
+                            new PointD3D(-bitmapWidth, -bitmapHeight, gridDepth * 2) / 2,
+                            new PointD3D(-bitmapWidth, bitmapHeight, gridDepth * 2) / 2,
+                            new PointD3D(bitmapWidth, bitmapHeight, gridDepth * 2) / 2,
+                            new PointD3D(bitmapWidth, -bitmapHeight, gridDepth * 2) / 2
+                        };
+                        for (int i = 0; i < pts.Length; i++)
+                        {
+                            pts[i] = pts[i].ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
+                        }
+                    }
+
+                    double minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
+                    for (int i = 0; i < pts.Length; i++)
+                    {
+                        if (i == 0)
+                        {
+                            minX = maxX = pts[i].X;
+                            minY = maxY = pts[i].Y;
+                            minZ = maxZ = pts[i].Z;
                         }
                         else
                         {
-                            alpha = 255;
-                            int n = (int)(ptZ / _FocalLength);
-                            while (n > 0)
+                            minX = Math.Min(minX, pts[i].X);
+                            maxX = Math.Max(maxX, pts[i].X);
+                            minY = Math.Min(minY, pts[i].Y);
+                            maxY = Math.Max(maxY, pts[i].Y);
+                            minZ = Math.Min(minZ, pts[i].Z);
+                            maxZ = Math.Max(maxZ, pts[i].Z);
+                        }
+                    }
+
+                    minX = Math.Floor(minX / _GridDistance) * _GridDistance;
+                    maxX = Math.Floor(maxX / _GridDistance) * _GridDistance;
+                    minY = Math.Floor(minY / _GridDistance) * _GridDistance;
+                    maxY = Math.Floor(maxY / _GridDistance) * _GridDistance;
+                    minZ = Math.Floor(minZ / _GridDistance) * _GridDistance;
+                    maxZ = Math.Floor(maxZ / _GridDistance) * _GridDistance;
+
+                    int transformNum = 0;
+                    for (double x = minX; x <= maxX; x += _GridDistance)
+                    {
+                        for (double y = minY; y <= maxY; y += _GridDistance)
+                        {
+                            for (double z = minZ; z <= maxZ; z += _GridDistance)
                             {
-                                n--;
-                                alpha /= 2;
+                                PointD pt0 = _WorldToScreen(new PointD3D(x, y, z), out double ptZ);
+                                PointD pt1 = _WorldToScreen(new PointD3D(x + _GridDistance, y, z), out _);
+                                PointD pt2 = _WorldToScreen(new PointD3D(x, y + _GridDistance, z), out _);
+                                PointD pt3 = _WorldToScreen(new PointD3D(x, y, z + _GridDistance), out _);
+                                transformNum += 4;
+
+                                double alpha = 255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5)));
+                                Color cr = Color.FromArgb(Math.Max(0, Math.Min(255, (int)alpha)), 64, 64, 64);
+
+                                Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true);
+                                Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true);
+                                Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true);
                             }
                         }
-                        Color cr = Color.FromArgb(Math.Max(0, Math.Min(255, alpha)), 64, 64, 64);
-
-                        Painting2D.PaintLine(bitmap, pt0, pt1, cr, 1, true);
-                        Painting2D.PaintLine(bitmap, pt0, pt2, cr, 1, true);
-                        Painting2D.PaintLine(bitmap, pt0, pt3, cr, 1, true);
                     }
+
+                    _TransformFrequencyCounter.Update(transformNum);
                 }
             }
-
-            _TransformFrequencyCounter.Update(transformNum);
         }
+
+        private DateTime _LastGenerateTime = DateTime.MinValue; // 最近一次渲染的日期时间。
+        private double _LastSnapshotTime = 0; // 最近一次获取的快照的最新一帧的时刻。
+        private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
+
+        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
 
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
         {
-            int bitmapWidth = _BitmapSize.Width;
-            int bitmapHeight = _BitmapSize.Height;
+            _UpdateGridBitmap();
 
-            Bitmap bitmap = new Bitmap(Math.Max(1, bitmapWidth), Math.Max(1, bitmapHeight));
+            Bitmap bitmap = (Bitmap)_GridBitmap.Clone();
 
             using (Graphics grap = Graphics.FromImage(bitmap))
             {
                 grap.SmoothingMode = SmoothingMode.AntiAlias;
-                grap.Clear(_RedrawControl.BackColor);
-
-                _DrawGrid(bitmap);
 
                 if (_SimulationIsRunning)
                 {
@@ -480,6 +510,8 @@ namespace Multibody
 
                         using (Brush br = new SolidBrush(Color.Silver))
                         {
+                            int bitmapHeight = bitmap.Height;
+
                             grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 240));
                             grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
                             grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
@@ -525,6 +557,8 @@ namespace Multibody
 
                         using (Brush br = new SolidBrush(Color.Silver))
                         {
+                            int bitmapHeight = bitmap.Height;
+
                             grap.DrawString($"帧率: {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
                         }
                     }

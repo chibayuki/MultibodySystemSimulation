@@ -33,7 +33,7 @@ namespace Multibody
 
         #region 构造函数
 
-        public InteractiveManager(Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize)
+        public InteractiveManager(Control redrawControl, Action<Bitmap> redrawMethod, Size viewSize)
         {
             if (redrawControl is null || redrawMethod is null)
             {
@@ -44,7 +44,7 @@ namespace Multibody
 
             _SimulationData = new SimulationData();
 
-            _Renderer = new Renderer(_SimulationData, redrawControl, redrawMethod, coordinateOffset, bitmapSize);
+            _Renderer = new Renderer(_SimulationData, redrawControl, redrawMethod, viewSize);
             _Simulator = new Simulator(_SimulationData);
 
             _Renderer.Start();
@@ -298,10 +298,10 @@ namespace Multibody
 
         //
 
-        // 更新坐标系偏移。
-        public void UpdateCoordinateOffset(Point coordinateOffset)
+        // 更新视图大小。
+        public void UpdateViewSize(Size viewSize)
         {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.UpdateCoordinateOffset) { RequestData = coordinateOffset });
+            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.UpdateViewSize) { RequestData = viewSize });
         }
 
         #endregion
@@ -318,14 +318,6 @@ namespace Multibody
             {
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetTimeMag) { RequestData = value });
             }
-        }
-
-        //
-
-        // 更新坐标系偏移。
-        public void UpdateBitmapSize(Size bitmapSize)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.UpdateBitmapSize) { RequestData = bitmapSize });
         }
 
         #endregion

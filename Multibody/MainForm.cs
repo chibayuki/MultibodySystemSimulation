@@ -75,7 +75,7 @@ namespace Multibody
             const int d = 37;
             int i = 0;
 
-            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewCenter, _ViewSize);
+            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewSize);
 
             _Particles = new List<Particle>()
             {
@@ -118,8 +118,7 @@ namespace Multibody
 
         private void Form_Resize(object sender, EventArgs e)
         {
-            _InteractiveManager.UpdateCoordinateOffset(_ViewCenter);
-            _InteractiveManager.UpdateBitmapSize(_ViewSize);
+            _InteractiveManager.UpdateViewSize(_ViewSize);
         }
 
         private void Form_SizeChanged(object sender, EventArgs e)
@@ -153,9 +152,6 @@ namespace Multibody
 
         // 视图大小。
         private Size _ViewSize => new Size(Panel_View.Width, FormManager.CaptionBarHeight + Panel_View.Height);
-
-        // 视图中心。
-        private Point _ViewCenter => new Point(Panel_View.Width / 2, (FormManager.CaptionBarHeight + Panel_View.Height) / 2);
 
         //
 
@@ -324,7 +320,7 @@ namespace Multibody
                         }
                         else if (_PressedKeys.Contains(Keys.Z))
                         {
-                            PointD viewCenter = _ViewCenter;
+                            PointD viewCenter = new PointD(_ViewSize) / 2;
                             double rot = ((e.X, e.Y) - viewCenter).Azimuth - (_MouseDownLocation - viewCenter).Azimuth;
                             _InteractiveManager.ViewOperationRotateZ(rot);
                         }
