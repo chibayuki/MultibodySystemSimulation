@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -70,16 +70,6 @@ namespace Multibody
 
             SetTimeMag,
             UpdateBitmapSize
-        }
-
-        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
-        {
-            base.SelectAsyncMessagesForThisLoop(messages, out processCount, out discardUids);
-        }
-
-        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
-        {
-            base.SelectSyncMessagesForThisLoop(messages, out processCount, out discardUids);
         }
 
         protected override void ProcessMessage(UIMessage message)
@@ -197,16 +187,10 @@ namespace Multibody
         //
 
         // 视图控制开始。
-        private void _ViewOperationStart()
-        {
-            _AffineTransformationCopy = _AffineTransformation.Copy();
-        }
+        private void _ViewOperationStart() => _AffineTransformationCopy = _AffineTransformation.Copy();
 
         // 视图控制停止。
-        private void _ViewOperationStop()
-        {
-            _AffineTransformationCopy = null;
-        }
+        private void _ViewOperationStop() => _AffineTransformationCopy = null;
 
         // 视图控制类型。
         public enum ViewOperationType
@@ -214,6 +198,7 @@ namespace Multibody
             OffsetX,
             OffsetY,
             OffsetZ,
+
             RotateX,
             RotateY,
             RotateZ
@@ -233,23 +218,15 @@ namespace Multibody
 
                     if (value != 0)
                     {
-                        if (type <= ViewOperationType.OffsetZ)
+                        switch (type)
                         {
-                            switch (type)
-                            {
-                                case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
-                                case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
-                                case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
-                            }
-                        }
-                        else
-                        {
-                            switch (type)
-                            {
-                                case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
-                                case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
-                                case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
-                            }
+                            case ViewOperationType.OffsetX: affineTransformation.Offset(0, value); break;
+                            case ViewOperationType.OffsetY: affineTransformation.Offset(1, value); break;
+                            case ViewOperationType.OffsetZ: affineTransformation.Offset(2, value); break;
+
+                            case ViewOperationType.RotateX: affineTransformation.Rotate(1, 2, value); break;
+                            case ViewOperationType.RotateY: affineTransformation.Rotate(2, 0, value); break;
+                            case ViewOperationType.RotateZ: affineTransformation.Rotate(0, 1, value); break;
                         }
                     }
                 }
@@ -263,16 +240,10 @@ namespace Multibody
         private Point _CoordinateOffset; // 坐标系偏移。
 
         // 更新坐标系偏移。
-        private void _UpdateCoordinateOffset(Point coordinateOffset)
-        {
-            _CoordinateOffset = coordinateOffset;
-        }
+        private void _UpdateCoordinateOffset(Point coordinateOffset) => _CoordinateOffset = coordinateOffset;
 
         // 世界坐标系转换到屏幕坐标系。
-        private PointD _WorldToScreen(PointD3D pt)
-        {
-            return pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
-        }
+        private PointD _WorldToScreen(PointD3D pt) => pt.AffineTransformCopy(_AffineTransformation).ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(_CoordinateOffset);
 
         #endregion
 
@@ -290,17 +261,16 @@ namespace Multibody
 
         private Size _BitmapSize; // 位图大小。
 
-        // 更新坐标系偏移。
-        private void _UpdateBitmapSize(Size bitmapSize)
-        {
-            _BitmapSize = bitmapSize;
-        }
+        // 更新位图大小。
+        private void _UpdateBitmapSize(Size bitmapSize) => _BitmapSize = bitmapSize;
 
         //
 
         private DateTime _LastGenerateTime = DateTime.MinValue; // 最近一次渲染位图的日期时间。
         private double _LastSnapshotTime = 0; // 最近一次获取快照的最新一帧的时刻。
         private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
+
+        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
 
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
@@ -377,19 +347,17 @@ namespace Multibody
 
                         using (Brush Br = new SolidBrush(Color.Silver))
                         {
-                            Font ft = new Font("微软雅黑", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
+                            Grap.DrawString("帧率:", _Font, Br, new Point(5, bitmapSize.Height - 220));
+                            Grap.DrawString($"    动力学(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, Br, new Point(5, bitmapSize.Height - 200));
+                            Grap.DrawString($"    运动学(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, Br, new Point(5, bitmapSize.Height - 180));
+                            Grap.DrawString($"    图形学(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, Br, new Point(5, bitmapSize.Height - 160));
 
-                            Grap.DrawString("帧率:", ft, Br, new Point(5, bitmapSize.Height - 220));
-                            Grap.DrawString("    动力学(D): " + _SimulationData.DynamicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 200));
-                            Grap.DrawString("    运动学(K): " + _SimulationData.KinematicsPFS.ToString("N1") + " Hz", ft, Br, new Point(5, bitmapSize.Height - 180));
-                            Grap.DrawString("    图形学(G): " + _FrameRateCounter.Frequency.ToString("N1") + " FPS", ft, Br, new Point(5, bitmapSize.Height - 160));
+                            Grap.DrawString($"已缓存: {_SimulationData.CachedFrameCount} 帧", _Font, Br, new Point(5, bitmapSize.Height - 120));
+                            Grap.DrawString($"使用中: {snapshot.FrameCount} 帧", _Font, Br, new Point(5, bitmapSize.Height - 100));
+                            Grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, Br, new Point(5, bitmapSize.Height - 80));
+                            Grap.DrawString($"当前帧: D {latestFrame.DynamicsId}, K {latestFrame.KinematicsId}, G {latestFrame.GraphicsId}", _Font, Br, new Point(5, bitmapSize.Height - 60));
 
-                            Grap.DrawString("已缓存: " + _SimulationData.CachedFrameCount + " 帧", ft, Br, new Point(5, bitmapSize.Height - 120));
-                            Grap.DrawString("使用中: " + snapshot.FrameCount + " 帧", ft, Br, new Point(5, bitmapSize.Height - 100));
-                            Grap.DrawString("最新帧: D " + _SimulationData.LatestFrame.DynamicsId + ", K " + _SimulationData.LatestFrame.KinematicsId, ft, Br, new Point(5, bitmapSize.Height - 80));
-                            Grap.DrawString("当前帧: D " + latestFrame.DynamicsId + ", K " + latestFrame.KinematicsId + ", G " + latestFrame.GraphicsId, ft, Br, new Point(5, bitmapSize.Height - 60));
-
-                            Grap.DrawString("时间:   " + Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time)), ft, Br, new Point(5, bitmapSize.Height - 20));
+                            Grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, Br, new Point(5, bitmapSize.Height - 20));
                         }
                     }
 

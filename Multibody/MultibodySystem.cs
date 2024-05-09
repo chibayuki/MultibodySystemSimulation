@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -196,7 +196,7 @@ namespace Multibody
                 throw new ArgumentOutOfRangeException();
             }
 
-            if (particles == null)
+            if (particles is null)
             {
                 throw new ArgumentNullException();
             }
@@ -222,7 +222,7 @@ namespace Multibody
         // 重新设置此 MultibodySystem 对象的参数与所有粒子。
         public void Reset(double dynamicsResolution, double kinematicsResolution, double cacheSize, IEnumerable<Particle> particles)
         {
-            if (particles == null)
+            if (particles is null)
             {
                 throw new ArgumentNullException();
             }

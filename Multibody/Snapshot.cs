@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -24,7 +24,7 @@ namespace Multibody
 
         public Snapshot(IEnumerable<Frame> frames)
         {
-            if (frames == null)
+            if (frames is null)
             {
                 throw new ArgumentNullException();
             }
@@ -44,9 +44,6 @@ namespace Multibody
         public Frame LatestFrame => _Frames[_Frames.Length - 1];
 
         // 获取此 Snapshot 对象的指定帧。
-        public Frame GetFrame(int index)
-        {
-            return _Frames[index];
-        }
+        public Frame GetFrame(int index) => _Frames[index];
     }
 }

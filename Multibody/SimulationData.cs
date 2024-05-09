@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -264,13 +264,6 @@ namespace Multibody
         // 添加粒子。
         public void AddParticle(Particle particle)
         {
-            if (_SimulationIsRunning)
-            {
-                throw new InvalidOperationException();
-            }
-
-            //
-
             _ParticlesLock.EnterWriteLock();
 
             try
@@ -286,13 +279,6 @@ namespace Multibody
         // 删除粒子。
         public void RemoveParticle(int index)
         {
-            if (_SimulationIsRunning)
-            {
-                throw new InvalidOperationException();
-            }
-
-            //
-
             _ParticlesLock.EnterWriteLock();
 
             try
@@ -327,13 +313,6 @@ namespace Multibody
         // 设置粒子。
         public void SetParticle(int index, Particle particle)
         {
-            if (_SimulationIsRunning)
-            {
-                throw new InvalidOperationException();
-            }
-
-            //
-
             _ParticlesLock.EnterWriteLock();
 
             try

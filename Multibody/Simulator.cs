@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -36,19 +36,8 @@ namespace Multibody
 
         #region 消息处理器
 
-        protected override void SelectAsyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
-        {
-            base.SelectAsyncMessagesForThisLoop(messages, out processCount, out discardUids);
-        }
-
-        protected override void SelectSyncMessagesForThisLoop(IEnumerable<UIMessage> messages, out int processCount, out HashSet<long> discardUids)
-        {
-            base.SelectSyncMessagesForThisLoop(messages, out processCount, out discardUids);
-        }
-
         protected override void ProcessMessage(UIMessage message)
         {
-
         }
 
         protected override void MessageLoop()

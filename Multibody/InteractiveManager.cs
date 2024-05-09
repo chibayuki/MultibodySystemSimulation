@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -47,13 +47,7 @@ namespace Multibody
 
         #region 仿真
 
-        public bool SimulationIsRunning
-        {
-            get
-            {
-                return _SimulationData.SimulationIsRunning;
-            }
-        }
+        public bool SimulationIsRunning => _SimulationData.SimulationIsRunning;
 
         // 仿真开始。
         public void SimulationStart()
@@ -193,10 +187,7 @@ namespace Multibody
         }
 
         // 获取粒子。
-        public Particle GetParticle(int index)
-        {
-            return _SimulationData.GetParticle(index);
-        }
+        public Particle GetParticle(int index) => _SimulationData.GetParticle(index);
 
         // 设置粒子。
         public void SetParticle(int index, Particle particle)
@@ -313,7 +304,7 @@ namespace Multibody
 
         #region 渲染
 
-        private double TimeMag
+        public double TimeMag
         {
             get
             {

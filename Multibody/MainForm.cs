@@ -1,5 +1,5 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-Copyright © 2020 chibayuki@foxmail.com
+Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
 Version 1.0.117.1000.M2.201101-1440
@@ -34,17 +34,9 @@ namespace Multibody
     {
         #region 窗口定义
 
-        private FormManager Me;
+        public FormManager FormManager { get; private set; }
 
-        public FormManager FormManager
-        {
-            get
-            {
-                return Me;
-            }
-        }
-
-        private void _Ctor(FormManager owner)
+        public MainForm(FormManager owner)
         {
             InitializeComponent();
 
@@ -52,11 +44,11 @@ namespace Multibody
 
             if (owner != null)
             {
-                Me = new FormManager(this, owner);
+                FormManager = new FormManager(this, owner);
             }
             else
             {
-                Me = new FormManager(this);
+                FormManager = new FormManager(this);
             }
 
             //
@@ -64,31 +56,25 @@ namespace Multibody
             FormDefine();
         }
 
-        public MainForm()
+        public MainForm() : this(null)
         {
-            _Ctor(null);
-        }
-
-        public MainForm(FormManager owner)
-        {
-            _Ctor(owner);
         }
 
         private void FormDefine()
         {
-            Me.Caption = Application.ProductName;
-            Me.ShowCaptionBarColor = false;
-            Me.EnableCaptionBarTransparent = false;
-            Me.Theme = Theme.Black;
-            Me.ThemeColor = ColorManipulation.GetRandomColorX();
+            FormManager.Caption = Application.ProductName;
+            FormManager.ShowCaptionBarColor = false;
+            FormManager.EnableCaptionBarTransparent = false;
+            FormManager.Theme = Theme.Black;
+            FormManager.ThemeColor = ColorManipulation.GetRandomColorX();
 
-            Me.Loading += Me_Loading;
-            Me.Loaded += Me_Loaded;
-            Me.Closed += Me_Closed;
-            Me.Resize += Me_Resize;
-            Me.SizeChanged += Me_SizeChanged;
-            Me.ThemeChanged += Me_ThemeChanged;
-            Me.ThemeColorChanged += Me_ThemeChanged;
+            FormManager.Loading += Me_Loading;
+            FormManager.Loaded += Me_Loaded;
+            FormManager.Closed += Me_Closed;
+            FormManager.Resize += Me_Resize;
+            FormManager.SizeChanged += Me_SizeChanged;
+            FormManager.ThemeChanged += Me_ThemeChanged;
+            FormManager.ThemeColorChanged += Me_ThemeChanged;
         }
 
         #endregion
@@ -105,53 +91,25 @@ namespace Multibody
 
             _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewCenter(), _ViewSize());
 
-            _Particles = new List<Particle>();
-            _Particles.Add(new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
-            _Particles.Add(new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()));
+            _Particles = new List<Particle>()
+            {
+                new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()),
+                new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()),
+                new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor())
+            };
         }
 
         private void Me_Loaded(object sender, EventArgs e)
         {
-            Me.OnThemeChanged();
-            Me.OnSizeChanged();
+            FormManager.OnThemeChanged();
+            FormManager.OnSizeChanged();
 
             //
 
-            Label_OffsetX.MouseEnter += Label_ViewOperation_MouseEnter;
-            Label_OffsetY.MouseEnter += Label_ViewOperation_MouseEnter;
-            Label_OffsetZ.MouseEnter += Label_ViewOperation_MouseEnter;
-            Label_RotateX.MouseEnter += Label_ViewOperation_MouseEnter;
-            Label_RotateY.MouseEnter += Label_ViewOperation_MouseEnter;
-            Label_RotateZ.MouseEnter += Label_ViewOperation_MouseEnter;
-
-            Label_OffsetX.MouseLeave += Label_ViewOperation_MouseLeave;
-            Label_OffsetY.MouseLeave += Label_ViewOperation_MouseLeave;
-            Label_OffsetZ.MouseLeave += Label_ViewOperation_MouseLeave;
-            Label_RotateX.MouseLeave += Label_ViewOperation_MouseLeave;
-            Label_RotateY.MouseLeave += Label_ViewOperation_MouseLeave;
-            Label_RotateZ.MouseLeave += Label_ViewOperation_MouseLeave;
-
-            Label_OffsetX.MouseDown += Label_ViewOperation_MouseDown;
-            Label_OffsetY.MouseDown += Label_ViewOperation_MouseDown;
-            Label_OffsetZ.MouseDown += Label_ViewOperation_MouseDown;
-            Label_RotateX.MouseDown += Label_ViewOperation_MouseDown;
-            Label_RotateY.MouseDown += Label_ViewOperation_MouseDown;
-            Label_RotateZ.MouseDown += Label_ViewOperation_MouseDown;
-
-            Label_OffsetX.MouseUp += Label_ViewOperation_MouseUp;
-            Label_OffsetY.MouseUp += Label_ViewOperation_MouseUp;
-            Label_OffsetZ.MouseUp += Label_ViewOperation_MouseUp;
-            Label_RotateX.MouseUp += Label_ViewOperation_MouseUp;
-            Label_RotateY.MouseUp += Label_ViewOperation_MouseUp;
-            Label_RotateZ.MouseUp += Label_ViewOperation_MouseUp;
-
-            Label_OffsetX.MouseMove += Label_OffsetX_MouseMove;
-            Label_OffsetY.MouseMove += Label_OffsetY_MouseMove;
-            Label_OffsetZ.MouseMove += Label_OffsetZ_MouseMove;
-            Label_RotateX.MouseMove += Label_RotateX_MouseMove;
-            Label_RotateY.MouseMove += Label_RotateY_MouseMove;
-            Label_RotateZ.MouseMove += Label_RotateZ_MouseMove;
+            Panel_View.MouseEnter += Panel_View_MouseEnter;
+            Panel_View.LostFocus += Panel_View_LostFocus;
+            Panel_View.KeyDown += Panel_View_KeyDown;
+            Panel_View.KeyUp += Panel_View_KeyUp;
 
             Panel_View.MouseDown += Panel_View_MouseDown;
             Panel_View.MouseUp += Panel_View_MouseUp;
@@ -191,19 +149,19 @@ namespace Multibody
 
         private void Me_SizeChanged(object sender, EventArgs e)
         {
-            Me.OnResize();
+            FormManager.OnResize();
         }
 
         private void Me_ThemeChanged(object sender, EventArgs e)
         {
-            this.BackColor = Me.RecommendColors.FormBackground.ToColor();
+            this.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
-            Panel_View.BackColor = Me.RecommendColors.FormBackground.ToColor();
+            Panel_View.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
-            Panel_SideBar.BackColor = Me.RecommendColors.Background_DEC.ToColor();
+            Label_PressedKey.ForeColor = FormManager.RecommendColors.Text_INC.ToColor();
+            Label_HelpMessage.ForeColor = FormManager.RecommendColors.Text.ToColor();
 
-            Label_OffsetX.ForeColor = Label_OffsetY.ForeColor = Label_OffsetZ.ForeColor = Label_RotateX.ForeColor = Label_RotateY.ForeColor = Label_RotateZ.ForeColor = Me.RecommendColors.Text_INC.ToColor();
-            Label_OffsetX.BackColor = Label_OffsetY.BackColor = Label_OffsetZ.BackColor = Label_RotateX.BackColor = Label_RotateY.BackColor = Label_RotateZ.BackColor = Me.RecommendColors.Background_INC.ToColor();
+            Panel_SideBar.BackColor = FormManager.RecommendColors.Background_DEC.ToColor();
         }
 
         #endregion
@@ -219,120 +177,102 @@ namespace Multibody
         #region 视图控制
 
         // 视图中心。
-        private Point _ViewCenter()
-        {
-            return new Point(Panel_View.Width / 2, Panel_View.Height / 2);
-        }
+        private Point _ViewCenter() => new Point(Panel_View.Width / 2, (FormManager.CaptionBarHeight + Panel_View.Height) / 2);
 
         // 视图大小。
-        private Size _ViewSize()
-        {
-            return new Size(Panel_View.Width, Me.CaptionBarHeight + Panel_View.Height);
-        }
+        private Size _ViewSize() => new Size(Panel_View.Width, FormManager.CaptionBarHeight + Panel_View.Height);
 
         //
 
         private const double _ShiftPerPixel = 1; // 每像素的偏移量（像素）。
         private const double _RadPerPixel = Math.PI / 180; // 每像素的旋转角度（弧度）。
 
-        private Point _CursorLocation; // 鼠标指针位置。
-        private bool _AdjustNow = false; // 是否正在调整。
+        private Point _MouseDownLocation; // 鼠标按下时的指针位置。
+        private bool _AdjustingViewNow = false; // 是否正在调整视图。
 
-        private void Label_ViewOperation_MouseEnter(object sender, EventArgs e)
-        {
-            ((Label)sender).BackColor = Me.RecommendColors.Button_DEC.ToColor();
-        }
+        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
 
-        private void Label_ViewOperation_MouseLeave(object sender, EventArgs e)
+        private void _UpdatePressedKeyLabel()
         {
-            ((Label)sender).BackColor = Me.RecommendColors.Background_INC.ToColor();
-        }
-
-        private void Label_ViewOperation_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
+            if (_PressedKeys.Count == 0)
             {
-                ((Label)sender).BackColor = Me.RecommendColors.Button_INC.ToColor();
-                ((Label)sender).Cursor = Cursors.SizeWE;
-
-                _InteractiveManager.ViewOperationStart();
-
-                _CursorLocation = e.Location;
-                _AdjustNow = true;
+                Label_PressedKey.Text = "Δx, Δy, Δz";
+            }
+            else if (_PressedKeys.Count == 1)
+            {
+                if (_PressedKeys.Contains(Keys.X))
+                {
+                    Label_PressedKey.Text = "Δx";
+                }
+                else if (_PressedKeys.Contains(Keys.Y))
+                {
+                    Label_PressedKey.Text = "Δy";
+                }
+                else if (_PressedKeys.Contains(Keys.Z))
+                {
+                    Label_PressedKey.Text = "Δz";
+                }
+                else
+                {
+                    Label_PressedKey.Text = "?";
+                }
+            }
+            else if (_PressedKeys.Count == 2)
+            {
+                if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
+                {
+                    Label_PressedKey.Text = "Δx, Δy";
+                }
+                else if (_PressedKeys.Contains(Keys.R))
+                {
+                    if (_PressedKeys.Contains(Keys.X))
+                    {
+                        Label_PressedKey.Text = "Rx";
+                    }
+                    else if (_PressedKeys.Contains(Keys.Y))
+                    {
+                        Label_PressedKey.Text = "Ry";
+                    }
+                    else if (_PressedKeys.Contains(Keys.Z))
+                    {
+                        Label_PressedKey.Text = "Rz";
+                    }
+                    else
+                    {
+                        Label_PressedKey.Text = "?";
+                    }
+                }
+                else
+                {
+                    Label_PressedKey.Text = "?";
+                }
             }
         }
 
-        private void Label_ViewOperation_MouseUp(object sender, MouseEventArgs e)
+        private void Panel_View_MouseEnter(object sender, EventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            Panel_View.Focus();
+        }
+
+        private void Panel_View_LostFocus(object sender, EventArgs e)
+        {
+            _PressedKeys.Clear();
+            _UpdatePressedKeyLabel();
+        }
+
+        private void Panel_View_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z)
             {
-                _AdjustNow = false;
-
-                _InteractiveManager.ViewOperationStop();
-
-                ((Label)sender).BackColor = (Geometry.CursorIsInControl((Label)sender) ? Me.RecommendColors.Button_DEC.ToColor() : Me.RecommendColors.Background_INC.ToColor());
-                ((Label)sender).Cursor = Cursors.Default;
+                _PressedKeys.Add(e.KeyCode);
+                _UpdatePressedKeyLabel();
             }
         }
 
-        private void Label_OffsetX_MouseMove(object sender, MouseEventArgs e)
+        private void Panel_View_KeyUp(object sender, KeyEventArgs e)
         {
-            if (_AdjustNow)
-            {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
-
-                _InteractiveManager.ViewOperationOffsetX(off);
-            }
-        }
-
-        private void Label_OffsetY_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_AdjustNow)
-            {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
-
-                _InteractiveManager.ViewOperationOffsetY(off);
-            }
-        }
-
-        private void Label_OffsetZ_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_AdjustNow)
-            {
-                double off = (e.X - _CursorLocation.X) * _ShiftPerPixel * _InteractiveManager.SpaceMag;
-
-                _InteractiveManager.ViewOperationOffsetZ(off);
-            }
-        }
-
-        private void Label_RotateX_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_AdjustNow)
-            {
-                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
-
-                _InteractiveManager.ViewOperationRotateX(rot);
-            }
-        }
-
-        private void Label_RotateY_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_AdjustNow)
-            {
-                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
-
-                _InteractiveManager.ViewOperationRotateY(rot);
-            }
-        }
-
-        private void Label_RotateZ_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_AdjustNow)
-            {
-                double rot = (e.X - _CursorLocation.X) * _RadPerPixel;
-
-                _InteractiveManager.ViewOperationRotateZ(rot);
-            }
+            _PressedKeys.Remove(e.KeyCode);
+            _UpdatePressedKeyLabel();
         }
 
         private void Panel_View_MouseDown(object sender, MouseEventArgs e)
@@ -341,8 +281,8 @@ namespace Multibody
             {
                 _InteractiveManager.ViewOperationStart();
 
-                _CursorLocation = e.Location;
-                _AdjustNow = true;
+                _MouseDownLocation = e.Location;
+                _AdjustingViewNow = true;
             }
         }
 
@@ -350,7 +290,7 @@ namespace Multibody
         {
             if (e.Button == MouseButtons.Left)
             {
-                _AdjustNow = false;
+                _AdjustingViewNow = false;
 
                 _InteractiveManager.ViewOperationStop();
             }
@@ -358,28 +298,165 @@ namespace Multibody
 
         private void Panel_View_MouseMove(object sender, MouseEventArgs e)
         {
-            if (_AdjustNow)
+            if (_AdjustingViewNow)
             {
-                PointD off = new PointD((e.X - _CursorLocation.X) * _InteractiveManager.SpaceMag, (e.Y - _CursorLocation.Y) * _InteractiveManager.SpaceMag);
+                if (_PressedKeys.Count == 0)
+                {
+                    PointD off = (new PointD(e.X, e.Y) - _MouseDownLocation) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
 
-                _InteractiveManager.ViewOperationOffsetXY(off);
+                    _InteractiveManager.ViewOperationOffsetXY(off);
+                }
+                else if (_PressedKeys.Count == 1)
+                {
+                    if (_PressedKeys.Contains(Keys.X))
+                    {
+                        double off = (e.X - _MouseDownLocation.X) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
+
+                        _InteractiveManager.ViewOperationOffsetX(off);
+                    }
+                    else if (_PressedKeys.Contains(Keys.Y))
+                    {
+                        double off = (e.Y - _MouseDownLocation.Y) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
+
+                        _InteractiveManager.ViewOperationOffsetY(off);
+                    }
+                    else if (_PressedKeys.Contains(Keys.Z))
+                    {
+                        double off = -(e.Y - _MouseDownLocation.Y) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
+
+                        _InteractiveManager.ViewOperationOffsetZ(off);
+                    }
+                }
+                else if (_PressedKeys.Count == 2)
+                {
+                    if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
+                    {
+                        PointD off = (new PointD(e.X, e.Y) - _MouseDownLocation) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
+
+                        _InteractiveManager.ViewOperationOffsetXY(off);
+                    }
+                    else if (_PressedKeys.Contains(Keys.R))
+                    {
+                        if (_PressedKeys.Contains(Keys.X))
+                        {
+                            double rot = -(e.Y - _MouseDownLocation.Y) * _RadPerPixel;
+
+                            _InteractiveManager.ViewOperationRotateX(rot);
+                        }
+                        else if (_PressedKeys.Contains(Keys.Y))
+                        {
+                            double rot = (e.X - _MouseDownLocation.X) * _RadPerPixel;
+
+                            _InteractiveManager.ViewOperationRotateY(rot);
+                        }
+                        else if (_PressedKeys.Contains(Keys.Z))
+                        {
+                            PointD viewCenter = _ViewCenter();
+                            double rot = ((e.X, e.Y) - viewCenter).Azimuth - (_MouseDownLocation - viewCenter).Azimuth;
+
+                            _InteractiveManager.ViewOperationRotateZ(rot);
+                        }
+                    }
+                }
             }
         }
 
         private void Panel_View_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (!_AdjustNow)
+            if (!_AdjustingViewNow)
             {
-                double off = _InteractiveManager.SpaceMag;
-
-                if (e.Delta > 0)
+                if (_PressedKeys.Count == 0)
                 {
-                    off = -off;
-                }
+                    double off = _InteractiveManager.SpaceMag * _ShiftPerPixel;
 
-                _InteractiveManager.ViewOperationStart();
-                _InteractiveManager.ViewOperationOffsetZ(off);
-                _InteractiveManager.ViewOperationStop();
+                    if (e.Delta > 0)
+                    {
+                        off = -off;
+                    }
+
+                    _InteractiveManager.ViewOperationStart();
+                    _InteractiveManager.ViewOperationOffsetZ(off);
+                    _InteractiveManager.ViewOperationStop();
+                }
+                else if (_PressedKeys.Count == 1)
+                {
+                    double off = _InteractiveManager.SpaceMag * _ShiftPerPixel;
+
+                    if (_PressedKeys.Contains(Keys.X))
+                    {
+                        if (e.Delta < 0)
+                        {
+                            off = -off;
+                        }
+
+                        _InteractiveManager.ViewOperationStart();
+                        _InteractiveManager.ViewOperationOffsetX(off);
+                        _InteractiveManager.ViewOperationStop();
+                    }
+                    else if (_PressedKeys.Contains(Keys.Y))
+                    {
+                        if (e.Delta < 0)
+                        {
+                            off = -off;
+                        }
+
+                        _InteractiveManager.ViewOperationStart();
+                        _InteractiveManager.ViewOperationOffsetY(off);
+                        _InteractiveManager.ViewOperationStop();
+                    }
+                    else if (_PressedKeys.Contains(Keys.Z))
+                    {
+                        if (e.Delta > 0)
+                        {
+                            off = -off;
+                        }
+
+                        _InteractiveManager.ViewOperationStart();
+                        _InteractiveManager.ViewOperationOffsetZ(off);
+                        _InteractiveManager.ViewOperationStop();
+                    }
+                }
+                else if (_PressedKeys.Count == 2)
+                {
+                    if (_PressedKeys.Contains(Keys.R))
+                    {
+                        double rot = _RadPerPixel;
+
+                        if (_PressedKeys.Contains(Keys.X))
+                        {
+                            if (e.Delta > 0)
+                            {
+                                rot = -rot;
+                            }
+
+                            _InteractiveManager.ViewOperationStart();
+                            _InteractiveManager.ViewOperationRotateX(rot);
+                            _InteractiveManager.ViewOperationStop();
+                        }
+                        else if (_PressedKeys.Contains(Keys.Y))
+                        {
+                            if (e.Delta < 0)
+                            {
+                                rot = -rot;
+                            }
+
+                            _InteractiveManager.ViewOperationStart();
+                            _InteractiveManager.ViewOperationRotateY(rot);
+                            _InteractiveManager.ViewOperationStop();
+                        }
+                        else if (_PressedKeys.Contains(Keys.Z))
+                        {
+                            if (e.Delta > 0)
+                            {
+                                rot = -rot;
+                            }
+
+                            _InteractiveManager.ViewOperationStart();
+                            _InteractiveManager.ViewOperationRotateZ(rot);
+                            _InteractiveManager.ViewOperationStop();
+                        }
+                    }
+                }
             }
         }
 
@@ -392,18 +469,14 @@ namespace Multibody
         // 重绘方法。
         private void _RedrawMethod(Bitmap bitmap)
         {
-            if (_MultibodyBitmap != null)
-            {
-                _MultibodyBitmap.Dispose();
-            }
-
+            _MultibodyBitmap?.Dispose();
             _MultibodyBitmap = bitmap;
 
             if (_MultibodyBitmap != null)
             {
-                Me.CaptionBarBackgroundImage = _MultibodyBitmap;
+                FormManager.CaptionBarBackgroundImage = _MultibodyBitmap;
 
-                Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
+                Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
             }
         }
 
@@ -411,7 +484,7 @@ namespace Multibody
         {
             if (_MultibodyBitmap != null)
             {
-                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -Me.CaptionBarHeight));
+                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
             }
         }
 
