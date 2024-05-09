@@ -41,6 +41,13 @@ namespace Multibody
 
         public Renderer(SimulationData simulationData, Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize) : base()
         {
+            if (simulationData is null || redrawControl is null || redrawMethod is null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            //
+
             _SimulationData = simulationData;
 
             _RedrawControl = redrawControl;
@@ -270,14 +277,15 @@ namespace Multibody
         private double _LastSnapshotTime = 0; // 最近一次获取快照的最新一帧的时刻。
         private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
 
-        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
+        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
 
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
         {
-            Size bitmapSize = _BitmapSize;
+            int bitmapWidth = _BitmapSize.Width;
+            int bitmapHeight = _BitmapSize.Height;
 
-            Bitmap bitmap = new Bitmap(Math.Max(1, bitmapSize.Width), Math.Max(1, bitmapSize.Height));
+            Bitmap bitmap = new Bitmap(Math.Max(1, bitmapWidth), Math.Max(1, bitmapHeight));
 
             if (_SimulationIsRunning)
             {
@@ -302,35 +310,34 @@ namespace Multibody
 
                 if (snapshot != null && snapshot.FrameCount > 0)
                 {
-                    using (Graphics Grap = Graphics.FromImage(bitmap))
+                    using (Graphics grap = Graphics.FromImage(bitmap))
                     {
-                        Grap.SmoothingMode = SmoothingMode.AntiAlias;
-                        Grap.Clear(_RedrawControl.BackColor);
+                        grap.SmoothingMode = SmoothingMode.AntiAlias;
+                        grap.Clear(_RedrawControl.BackColor);
 
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
                         Frame latestFrame = snapshot.LatestFrame;
                         latestFrame.GraphicsId = _GenerateCount;
 
-                        int FrameCount = snapshot.FrameCount;
+                        int frameCount = snapshot.FrameCount;
+                        int particleCount = latestFrame.ParticleCount;
 
-                        for (int i = 0; i < latestFrame.ParticleCount; i++)
+                        for (int i = 0; i < particleCount; i++)
                         {
-                            PointD location = _WorldToScreen(latestFrame.GetParticle(i).Location);
-
-                            for (int j = FrameCount - 1; j >= 1; j--)
+                            for (int j = frameCount - 1; j >= 1; j--)
                             {
                                 PointD pt1 = _WorldToScreen(snapshot.GetFrame(j).GetParticle(i).Location);
                                 PointD pt2 = _WorldToScreen(snapshot.GetFrame(j - 1).GetParticle(i).Location);
 
                                 if (Geometry.LineIsVisibleInRectangle(pt1, pt2, bitmapBounds))
                                 {
-                                    Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / FrameCount, latestFrame.GetParticle(i).Color), 1, true);
+                                    Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / frameCount, latestFrame.GetParticle(i).Color), 1, true);
                                 }
                             }
                         }
 
-                        for (int i = 0; i < latestFrame.ParticleCount; i++)
+                        for (int i = 0; i < particleCount; i++)
                         {
                             PointD location = _WorldToScreen(latestFrame.GetParticle(i).Location);
 
@@ -340,24 +347,24 @@ namespace Multibody
                             {
                                 using (Brush Br = new SolidBrush(latestFrame.GetParticle(i).Color))
                                 {
-                                    Grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
+                                    grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
                                 }
                             }
                         }
 
-                        using (Brush Br = new SolidBrush(Color.Silver))
+                        using (Brush br = new SolidBrush(Color.Silver))
                         {
-                            Grap.DrawString("帧率:", _Font, Br, new Point(5, bitmapSize.Height - 220));
-                            Grap.DrawString($"    动力学(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, Br, new Point(5, bitmapSize.Height - 200));
-                            Grap.DrawString($"    运动学(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, Br, new Point(5, bitmapSize.Height - 180));
-                            Grap.DrawString($"    图形学(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, Br, new Point(5, bitmapSize.Height - 160));
+                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 220));
+                            grap.DrawString($"    动力学(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
+                            grap.DrawString($"    运动学(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
+                            grap.DrawString($"    图形学(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
 
-                            Grap.DrawString($"已缓存: {_SimulationData.CachedFrameCount} 帧", _Font, Br, new Point(5, bitmapSize.Height - 120));
-                            Grap.DrawString($"使用中: {snapshot.FrameCount} 帧", _Font, Br, new Point(5, bitmapSize.Height - 100));
-                            Grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, Br, new Point(5, bitmapSize.Height - 80));
-                            Grap.DrawString($"当前帧: D {latestFrame.DynamicsId}, K {latestFrame.KinematicsId}, G {latestFrame.GraphicsId}", _Font, Br, new Point(5, bitmapSize.Height - 60));
+                            grap.DrawString($"已缓存: {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
+                            grap.DrawString($"使用中: {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
+                            grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, br, new Point(5, bitmapHeight - 80));
+                            grap.DrawString($"当前帧: D {latestFrame.DynamicsId}, K {latestFrame.KinematicsId}, G {latestFrame.GraphicsId}", _Font, br, new Point(5, bitmapHeight - 60));
 
-                            Grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, Br, new Point(5, bitmapSize.Height - 20));
+                            grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, br, new Point(5, bitmapHeight - 20));
                         }
                     }
 
@@ -387,10 +394,7 @@ namespace Multibody
         // 重绘。
         private void _RedrawBitmap()
         {
-            using (Bitmap bitmap = _GenerateBitmap())
-            {
-                _RedrawControl.Invoke(_RedrawMethod, (Bitmap)bitmap.Clone());
-            }
+            _RedrawControl.Invoke(_RedrawMethod, _GenerateBitmap());
 
             _FrameRateCounter.Update();
         }

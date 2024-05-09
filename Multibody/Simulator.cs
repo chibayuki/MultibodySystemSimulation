@@ -29,6 +29,13 @@ namespace Multibody
 
         public Simulator(SimulationData simulationData) : base()
         {
+            if (simulationData is null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            //
+
             _SimulationData = simulationData;
         }
 

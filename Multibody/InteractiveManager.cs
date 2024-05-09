@@ -35,6 +35,13 @@ namespace Multibody
 
         public InteractiveManager(Control redrawControl, Action<Bitmap> redrawMethod, Point coordinateOffset, Size bitmapSize)
         {
+            if (redrawControl is null || redrawMethod is null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            //
+
             _SimulationData = new SimulationData();
 
             _Renderer = new Renderer(_SimulationData, redrawControl, redrawMethod, coordinateOffset, bitmapSize);
@@ -84,7 +91,6 @@ namespace Multibody
             {
                 return _SimulationData.DynamicsResolution;
             }
-
             set
             {
                 if (_SimulationData.SimulationIsRunning)
@@ -104,7 +110,6 @@ namespace Multibody
             {
                 return _SimulationData.KinematicsResolution;
             }
-
             set
             {
                 if (_SimulationData.SimulationIsRunning)
@@ -124,7 +129,6 @@ namespace Multibody
             {
                 return _SimulationData.CacheSize;
             }
-
             set
             {
                 if (_SimulationData.SimulationIsRunning)
@@ -144,7 +148,6 @@ namespace Multibody
             {
                 return _SimulationData.TrackLength;
             }
-
             set
             {
                 if (_SimulationData.SimulationIsRunning)
@@ -222,7 +225,6 @@ namespace Multibody
             {
                 return _SimulationData.FocalLength;
             }
-
             set
             {
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetFocalLength) { RequestData = value });
@@ -235,7 +237,6 @@ namespace Multibody
             {
                 return _SimulationData.SpaceMag;
             }
-
             set
             {
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetSpaceMag) { RequestData = value });
@@ -310,7 +311,6 @@ namespace Multibody
             {
                 return _SimulationData.TimeMag;
             }
-
             set
             {
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetTimeMag) { RequestData = value });

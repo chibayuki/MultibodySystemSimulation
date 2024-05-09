@@ -66,7 +66,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _SimulationStateLock.EnterWriteLock();
@@ -112,7 +111,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -147,7 +145,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -182,7 +179,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -217,7 +213,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -554,7 +549,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _GraphicsLock.EnterWriteLock();
@@ -589,7 +583,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _GraphicsLock.EnterWriteLock();
@@ -633,7 +626,6 @@ namespace Multibody
 
                 return result;
             }
-
             set
             {
                 _RenderLock.EnterWriteLock();

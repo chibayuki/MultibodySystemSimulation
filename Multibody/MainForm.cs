@@ -27,6 +27,7 @@ using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
 using Theme = Com.WinForm.Theme;
+using System.Runtime.CompilerServices;
 
 namespace Multibody
 {
@@ -36,52 +37,39 @@ namespace Multibody
 
         public FormManager FormManager { get; private set; }
 
+        public MainForm() : this(null)
+        {
+        }
+
         public MainForm(FormManager owner)
         {
             InitializeComponent();
 
             //
 
-            if (owner != null)
+            FormManager = new FormManager(this, owner)
             {
-                FormManager = new FormManager(this, owner);
-            }
-            else
-            {
-                FormManager = new FormManager(this);
-            }
+                Caption = Application.ProductName,
+                ShowCaptionBarColor = false,
+                EnableCaptionBarTransparent = false,
+                Theme = Theme.Black,
+                ThemeColor = ColorManipulation.GetRandomColorX(),
+            };
 
-            //
-
-            FormDefine();
-        }
-
-        public MainForm() : this(null)
-        {
-        }
-
-        private void FormDefine()
-        {
-            FormManager.Caption = Application.ProductName;
-            FormManager.ShowCaptionBarColor = false;
-            FormManager.EnableCaptionBarTransparent = false;
-            FormManager.Theme = Theme.Black;
-            FormManager.ThemeColor = ColorManipulation.GetRandomColorX();
-
-            FormManager.Loading += Me_Loading;
-            FormManager.Loaded += Me_Loaded;
-            FormManager.Closed += Me_Closed;
-            FormManager.Resize += Me_Resize;
-            FormManager.SizeChanged += Me_SizeChanged;
-            FormManager.ThemeChanged += Me_ThemeChanged;
-            FormManager.ThemeColorChanged += Me_ThemeChanged;
+            FormManager.Loading += FormLoading;
+            FormManager.Loaded += FormLoaded;
+            FormManager.Closed += FormClosed;
+            FormManager.Resize += FormResize;
+            FormManager.SizeChanged += FormSizeChanged;
+            FormManager.ThemeChanged += FormThemeChanged;
+            FormManager.ThemeColorChanged += FormThemeChanged;
         }
 
         #endregion
 
         #region 窗口事件回调
 
-        private void Me_Loading(object sender, EventArgs e)
+        private void FormLoading(object sender, EventArgs e)
         {
             int h = Statistics.RandomInteger(360);
             const int s = 100;
@@ -99,7 +87,7 @@ namespace Multibody
             };
         }
 
-        private void Me_Loaded(object sender, EventArgs e)
+        private void FormLoaded(object sender, EventArgs e)
         {
             FormManager.OnThemeChanged();
             FormManager.OnSizeChanged();
@@ -110,7 +98,6 @@ namespace Multibody
             Panel_View.LostFocus += Panel_View_LostFocus;
             Panel_View.KeyDown += Panel_View_KeyDown;
             Panel_View.KeyUp += Panel_View_KeyUp;
-
             Panel_View.MouseDown += Panel_View_MouseDown;
             Panel_View.MouseUp += Panel_View_MouseUp;
             Panel_View.MouseMove += Panel_View_MouseMove;
@@ -126,12 +113,12 @@ namespace Multibody
             _InteractiveManager.SimulationStart();
         }
 
-        private void Me_Closed(object sender, EventArgs e)
+        private void FormClosed(object sender, EventArgs e)
         {
             _InteractiveManager.SimulationStop();
         }
 
-        private void Me_Resize(object sender, EventArgs e)
+        private void FormResize(object sender, EventArgs e)
         {
             Panel_SideBar.Height = Panel_Main.Height;
             Panel_SideBar.Left = Panel_Main.Width - Panel_SideBar.Width;
@@ -147,12 +134,12 @@ namespace Multibody
             }
         }
 
-        private void Me_SizeChanged(object sender, EventArgs e)
+        private void FormSizeChanged(object sender, EventArgs e)
         {
             FormManager.OnResize();
         }
 
-        private void Me_ThemeChanged(object sender, EventArgs e)
+        private void FormThemeChanged(object sender, EventArgs e)
         {
             this.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
@@ -251,7 +238,10 @@ namespace Multibody
 
         private void Panel_View_MouseEnter(object sender, EventArgs e)
         {
-            Panel_View.Focus();
+            if (FormManager.IsActive)
+            {
+                Panel_View.Focus();
+            }
         }
 
         private void Panel_View_LostFocus(object sender, EventArgs e)
@@ -280,7 +270,6 @@ namespace Multibody
             if (e.Button == MouseButtons.Left)
             {
                 _InteractiveManager.ViewOperationStart();
-
                 _MouseDownLocation = e.Location;
                 _AdjustingViewNow = true;
             }
@@ -291,7 +280,6 @@ namespace Multibody
             if (e.Button == MouseButtons.Left)
             {
                 _AdjustingViewNow = false;
-
                 _InteractiveManager.ViewOperationStop();
             }
         }
@@ -303,7 +291,6 @@ namespace Multibody
                 if (_PressedKeys.Count == 0)
                 {
                     PointD off = (new PointD(e.X, e.Y) - _MouseDownLocation) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                     _InteractiveManager.ViewOperationOffsetXY(off);
                 }
                 else if (_PressedKeys.Count == 1)
@@ -311,19 +298,16 @@ namespace Multibody
                     if (_PressedKeys.Contains(Keys.X))
                     {
                         double off = (e.X - _MouseDownLocation.X) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                         _InteractiveManager.ViewOperationOffsetX(off);
                     }
                     else if (_PressedKeys.Contains(Keys.Y))
                     {
                         double off = (e.Y - _MouseDownLocation.Y) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                         _InteractiveManager.ViewOperationOffsetY(off);
                     }
                     else if (_PressedKeys.Contains(Keys.Z))
                     {
                         double off = -(e.Y - _MouseDownLocation.Y) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                         _InteractiveManager.ViewOperationOffsetZ(off);
                     }
                 }
@@ -332,7 +316,6 @@ namespace Multibody
                     if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
                     {
                         PointD off = (new PointD(e.X, e.Y) - _MouseDownLocation) * _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                         _InteractiveManager.ViewOperationOffsetXY(off);
                     }
                     else if (_PressedKeys.Contains(Keys.R))
@@ -340,20 +323,17 @@ namespace Multibody
                         if (_PressedKeys.Contains(Keys.X))
                         {
                             double rot = -(e.Y - _MouseDownLocation.Y) * _RadPerPixel;
-
                             _InteractiveManager.ViewOperationRotateX(rot);
                         }
                         else if (_PressedKeys.Contains(Keys.Y))
                         {
                             double rot = (e.X - _MouseDownLocation.X) * _RadPerPixel;
-
                             _InteractiveManager.ViewOperationRotateY(rot);
                         }
                         else if (_PressedKeys.Contains(Keys.Z))
                         {
                             PointD viewCenter = _ViewCenter();
                             double rot = ((e.X, e.Y) - viewCenter).Azimuth - (_MouseDownLocation - viewCenter).Azimuth;
-
                             _InteractiveManager.ViewOperationRotateZ(rot);
                         }
                     }
@@ -368,7 +348,6 @@ namespace Multibody
                 if (_PressedKeys.Count == 0)
                 {
                     double off = _InteractiveManager.SpaceMag * _ShiftPerPixel;
-
                     if (e.Delta > 0)
                     {
                         off = -off;
@@ -475,7 +454,6 @@ namespace Multibody
             if (_MultibodyBitmap != null)
             {
                 FormManager.CaptionBarBackgroundImage = _MultibodyBitmap;
-
                 Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
             }
         }
