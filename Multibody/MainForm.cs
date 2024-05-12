@@ -73,15 +73,15 @@ namespace Multibody
             const int s = 100;
             const int v = 70;
             const int d = 37;
-            int i = 0;
 
             _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewSize);
 
+            int id = 0;
             _Particles = new List<Particle>()
             {
-                new Particle(1E8, 5, new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()),
-                new Particle(1E3, 2, new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor()),
-                new Particle(1E1, 2, new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0), ColorX.FromHSL((h + d * (i++)) % 360, s, v).ToColor())
+                new Particle(id++, 1E8, 5, ColorX.FromHSL((h + d * id) % 360, s, v).ToColor(), new PointD3D(0, 0, 1000), new PointD3D(0, 0, 0)),
+                new Particle(id++, 1E3, 2, ColorX.FromHSL((h + d * id) % 360, s, v).ToColor(), new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0)),
+                new Particle(id++, 1E1, 2, ColorX.FromHSL((h + d * id) % 360, s, v).ToColor(), new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0))
             };
         }
 

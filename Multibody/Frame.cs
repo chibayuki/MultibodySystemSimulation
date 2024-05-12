@@ -28,7 +28,6 @@ namespace Multibody
 
         private long _DynamicsId; // 基于动力学的ID。
         private long _KinematicsId; // 基于运动学的ID。
-        private long _GraphicsId; // 基于图形学的ID。
 
         private double _Time; // 相对时刻（秒）。
         private Particle[] _Particles; // 所有粒子。
@@ -51,7 +50,6 @@ namespace Multibody
 
             _DynamicsId = 0;
             _KinematicsId = 0;
-            _GraphicsId = 0;
 
             _Time = time;
             _Particles = new Particle[particles.Length];
@@ -82,7 +80,6 @@ namespace Multibody
 
             _DynamicsId = 0;
             _KinematicsId = 0;
-            _GraphicsId = 0;
 
             _Time = time;
             _Particles = new Particle[particleArray.Length];
@@ -124,20 +121,6 @@ namespace Multibody
             }
         }
 
-        // 获取或设置此 Frame 对象基于图形学的 ID。
-        public long GraphicsId
-        {
-            get
-            {
-                return _GraphicsId;
-            }
-
-            set
-            {
-                _GraphicsId = value;
-            }
-        }
-
         // 获取此 Frame 对象的相对时刻（秒）。
         public double Time => _Time;
 
@@ -154,7 +137,6 @@ namespace Multibody
             {
                 _DynamicsId = this._DynamicsId,
                 _KinematicsId = this._KinematicsId,
-                _GraphicsId = this._GraphicsId
             };
         }
 

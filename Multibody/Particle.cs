@@ -18,24 +18,33 @@ using System.Threading.Tasks;
 using System.Drawing;
 
 using PointD3D = Com.PointD3D;
+using Com;
 
 namespace Multibody
 {
-    // 粒子的其他属性。
-    internal sealed class ParticleExtAttr
+    // 粒子的固定属性。
+    internal sealed class ParticleConstantAttr
     {
-        private double _Density; // 密度。
-        private Color _Color; // 颜色。
-
-        public ParticleExtAttr(double density, Color color)
+        public ParticleConstantAttr(int id, double mass, double radius, Color color)
         {
-            _Density = density;
-            _Color = color;
+            Id = id;
+
+            Mass = mass;
+            Radius = radius;
+            Density = mass * 0.75 / Math.PI / (radius * radius * radius);
+
+            Color = color;
         }
 
-        public double Density => _Density;
+        public int Id { get; private set; } // ID。
 
-        public Color Color => _Color;
+        public double Mass { get; private set; } // 质量（千克）。
+
+        public double Radius { get; private set; } // 半径（米）。
+
+        public double Density { get; private set; } // 密度。
+
+        public Color Color { get; private set; } // 颜色。
     }
 
     // 粒子，表示三维空间中的有体积的质点。
@@ -43,16 +52,36 @@ namespace Multibody
     {
         private bool _Frozen; // 是否已冻结。
 
-        private double _Mass; // 质量（千克）。
-        private double _Radius; // 半径（米）。
+        private ParticleConstantAttr _ConstantAttr; // 固定属性。
 
         private PointD3D _Location; // 位置（米）。
         private PointD3D _Velocity; // 速度（米/秒）。
         private PointD3D _Force; // 作用力（牛顿）。
 
-        private ParticleExtAttr _Attr; // 其他属性。
+        private Particle(ParticleConstantAttr constantAttr, PointD3D location, PointD3D velocity, PointD3D force)
+        {
+            if (constantAttr is null)
+            {
+                throw new ArgumentNullException();
+            }
 
-        private Particle(double mass, double radius, PointD3D location, PointD3D velocity, PointD3D force, ParticleExtAttr attr)
+            if (location.IsNaNOrInfinity || velocity.IsNaNOrInfinity || force.IsNaNOrInfinity)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            //
+
+            _Frozen = false;
+
+            _ConstantAttr = constantAttr;
+
+            _Location = location;
+            _Velocity = velocity;
+            _Force = force;
+        }
+
+        private Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity, PointD3D force)
         {
             if ((double.IsNaN(mass) || double.IsInfinity(mass) || mass <= 0) || (double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0) || location.IsNaNOrInfinity || velocity.IsNaNOrInfinity || force.IsNaNOrInfinity)
             {
@@ -63,28 +92,31 @@ namespace Multibody
 
             _Frozen = false;
 
-            _Mass = mass;
-            _Radius = radius;
+            _ConstantAttr = new ParticleConstantAttr(id, mass, radius, color);
 
             _Location = location;
             _Velocity = velocity;
             _Force = force;
-
-            _Attr = attr;
         }
 
-        public Particle(double mass, double radius, PointD3D location, PointD3D velocity, Color color) : this(mass, radius, location, velocity, PointD3D.Zero, new ParticleExtAttr(mass * 0.75 / Math.PI / (radius * radius * radius), color))
+        public Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity) : this(id, mass, radius, color, location, velocity, PointD3D.Zero)
         {
         }
 
+        // 获取此 Particle 对象的ID。
+        public int Id => _ConstantAttr.Id;
+
         // 获取此 Particle 对象的质量（千克）。
-        public double Mass => _Mass;
+        public double Mass => _ConstantAttr.Mass;
 
         // 获取此 Particle 对象的半径（米）。
-        public double Radius => _Radius;
+        public double Radius => _ConstantAttr.Radius;
 
         // 获取此 Particle 对象的密度（千克/立方米）。
-        private double Density => _Attr.Density;
+        public double Density => _ConstantAttr.Density;
+
+        // 获取此 Particle 对象的颜色。
+        public Color Color => _ConstantAttr.Color;
 
         // 获取此 Particle 对象的位置（米）。
         public PointD3D Location => _Location;
@@ -92,16 +124,16 @@ namespace Multibody
         // 获取此 Particle 对象的速度（米/秒）。
         public PointD3D Velocity => _Velocity;
 
-        // 获取此 Particle 对象的加速度（米/平方秒）。
-        public PointD3D Acceleration => _Force / _Mass;
+        // 获取此 Particle 对象受到的的作用力（牛顿）。
+        public PointD3D Force => _Force;
 
-        // 获取此 Particle 对象的颜色。
-        public Color Color => _Attr.Color;
+        // 获取此 Particle 对象的加速度（米/平方秒）。
+        public PointD3D Acceleration => _Force / _ConstantAttr.Mass;
 
         // 返回此 Particle 对象的副本。
         public Particle Copy()
         {
-            return new Particle(_Mass, _Radius, _Location, _Velocity, _Force, _Attr);
+            return new Particle(_ConstantAttr, _Location, _Velocity, _Force);
         }
 
         // 将此 Particle 对象运动指定的时长（秒）。
