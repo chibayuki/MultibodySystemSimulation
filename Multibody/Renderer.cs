@@ -337,8 +337,8 @@ namespace Multibody
             }
         }
 
-        // 更新坐标系网格位图。
-        private void _UpdateGridBitmap()
+        // 生成坐标系网格位图。
+        private void _GenerateGridBitmap()
         {
             // 坐标系网格在视图内的可见部分，在世界坐标系中是一个顶点位于视图中心（或者，当不考虑绘图偏移时为原点）、高度无限大的四棱锥，
             // 其任一横截面与视图矩形相似，棱的斜率与投影变换的焦距成反比；考虑该四棱锥从顶点起、高度有限大的部分，
@@ -431,10 +431,9 @@ namespace Multibody
 
                                 double alpha = 255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5)));
                                 Color cr = Color.FromArgb(Math.Max(0, Math.Min(255, (int)alpha)), 64, 64, 64);
-                                Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true);
-                                Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true);
-                                Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true);
-                                lineNum += 3;
+                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true)) { lineNum++; }
+                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true)) { lineNum++; }
+                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true)) { lineNum++; }
                             }
                         }
                     }
@@ -460,7 +459,7 @@ namespace Multibody
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
         {
-            _UpdateGridBitmap();
+            _GenerateGridBitmap();
 
             Bitmap bitmap = (Bitmap)_GridBitmap.Clone();
 
@@ -535,8 +534,10 @@ namespace Multibody
                                 {
                                     if (pt1.DistanceFrom(pt2) >= 2 || k == 0)
                                     {
-                                        Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * (j + k) / 2 / frameCount, latestFrame.GetParticle(i).Color), 1, true);
-                                        lineNum++;
+                                        if (Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * (j + k) / 2 / frameCount, latestFrame.GetParticle(i).Color), 1, true))
+                                        {
+                                            lineNum++;
+                                        }
                                         j = k;
                                         pt1 = pt2;
                                     }
