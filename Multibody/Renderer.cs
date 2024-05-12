@@ -323,6 +323,8 @@ namespace Multibody
             _GridDistance = (double)gridDist;
         }
 
+        private FrequencyCounter _DrawLineFrequencyCounter = new FrequencyCounter(); // 绘制直线的频率计数器。
+
         Bitmap _GridBitmap = null; // 坐标系网格位图。
 
         // 删除坐标系网格位图。
@@ -414,6 +416,7 @@ namespace Multibody
                     maxZ = Math.Floor(maxZ / _GridDistance) * _GridDistance;
 
                     int transformNum = 0;
+                    int lineNum = 0;
                     for (double x = minX; x <= maxX; x += _GridDistance)
                     {
                         for (double y = minY; y <= maxY; y += _GridDistance)
@@ -428,10 +431,10 @@ namespace Multibody
 
                                 double alpha = 255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5)));
                                 Color cr = Color.FromArgb(Math.Max(0, Math.Min(255, (int)alpha)), 64, 64, 64);
-
                                 Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true);
                                 Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true);
                                 Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true);
+                                lineNum += 3;
                             }
                         }
                     }
@@ -439,6 +442,10 @@ namespace Multibody
                     if (transformNum > 0)
                     {
                         _TransformFrequencyCounter.Update(transformNum);
+                    }
+                    if (lineNum > 0)
+                    {
+                        _DrawLineFrequencyCounter.Update(lineNum);
                     }
                 }
             }
@@ -480,53 +487,79 @@ namespace Multibody
 
                     Snapshot snapshot = _SimulationData.GetSnapshot(time - _SimulationData.TrackLength, time);
 
+                    long latestFrameDynamicsId = -1, latestFrameKinematicsId = -1;
                     if (snapshot != null && snapshot.FrameCount > 0)
                     {
-                        Frame oldestFrame = snapshot.OldestFrame;
-                        Frame latestFrame = snapshot.LatestFrame;
+                        int frameCount = snapshot.FrameCount;
 
+                        Frame latestFrame = snapshot.LatestFrame;
                         _LastSnapshotTime = latestFrame.Time;
+                        latestFrameDynamicsId = latestFrame.DynamicsId;
+                        latestFrameKinematicsId = latestFrame.KinematicsId;
+                        int particleCount = latestFrame.ParticleCount;
 
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
-                        int frameCount = snapshot.FrameCount;
-                        int particleCount = latestFrame.ParticleCount;
-
                         int transformNum = 0;
+                        int lineNum = 0;
 
-                        for (int i = 0; i < particleCount; i++)
+                        if (frameCount > 1)
                         {
-                            for (int j = frameCount - 1; j >= 1; j--)
+                            for (int i = 0; i < particleCount; i++)
                             {
-                                Frame frame1 = snapshot.GetFrame(j);
-                                Frame frame2 = snapshot.GetFrame(j - 1);
-                                Particle particle1 = frame1.GetParticle(i);
-                                Particle particle2 = frame2.GetParticle(i);
+                                int j = frameCount - 1, k = frameCount - 2;
 
+                                Particle particle1 = snapshot.GetFrame(j).GetParticle(i);
                                 TransformResultCache cache1 = particle1.TransformResultCache;
                                 if (cache1.TransformID != _ViewParamChangedCount)
                                 {
                                     cache1.ScreenLocation = _WorldToScreen(particle1.Location, out double z);
                                     cache1.DistanceToScreen = z;
                                     cache1.TransformID = _ViewParamChangedCount;
-
                                     transformNum++;
                                 }
+                                PointD pt1 = cache1.ScreenLocation;
 
+                                Particle particle2 = snapshot.GetFrame(k).GetParticle(i);
                                 TransformResultCache cache2 = particle2.TransformResultCache;
                                 if (cache2.TransformID != _ViewParamChangedCount)
                                 {
                                     cache2.ScreenLocation = _WorldToScreen(particle2.Location, out double z);
                                     cache2.DistanceToScreen = z;
                                     cache2.TransformID = _ViewParamChangedCount;
-
                                     transformNum++;
                                 }
-
-                                PointD pt1 = cache1.ScreenLocation;
                                 PointD pt2 = cache2.ScreenLocation;
 
-                                Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * j / frameCount, latestFrame.GetParticle(i).Color), 1, true);
+                                while (true)
+                                {
+                                    if (pt1.DistanceFrom(pt2) >= 2 || k == 0)
+                                    {
+                                        Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * (j + k) / 2 / frameCount, latestFrame.GetParticle(i).Color), 1, true);
+                                        lineNum++;
+                                        j = k;
+                                        pt1 = pt2;
+                                    }
+
+                                    if (k > 0)
+                                    {
+                                        k--;
+                                        particle2 = snapshot.GetFrame(k).GetParticle(i);
+                                        cache2 = particle2.TransformResultCache;
+                                        if (cache2.TransformID != _ViewParamChangedCount)
+                                        {
+                                            cache2.ScreenLocation = _WorldToScreen(particle2.Location, out double z);
+                                            cache2.DistanceToScreen = z;
+                                            cache2.TransformID = _ViewParamChangedCount;
+                                            transformNum++;
+                                        }
+                                        pt2 = cache2.ScreenLocation;
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                         }
 
@@ -562,27 +595,31 @@ namespace Multibody
                         {
                             _TransformFrequencyCounter.Update(transformNum);
                         }
-
-                        using (Brush br = new SolidBrush(Color.Silver))
+                        if (lineNum > 0)
                         {
-                            int bitmapHeight = bitmap.Height;
-
-                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 240));
-                            grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
-                            grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
-                            grap.DrawString($"    仿射变换(T): {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
-                            grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
-
-                            grap.DrawString($"已缓存(K): {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
-                            grap.DrawString($"使用中(K): {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
-                            grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, br, new Point(5, bitmapHeight - 80));
-                            grap.DrawString($"当前帧: D {latestFrame.DynamicsId}, K {latestFrame.KinematicsId}, G {_GenerateCount}", _Font, br, new Point(5, bitmapHeight - 60));
-
-                            grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, br, new Point(5, bitmapHeight - 20));
+                            _DrawLineFrequencyCounter.Update(lineNum);
                         }
-
-                        _GenerateCount++;
                     }
+
+                    using (Brush br = new SolidBrush(Color.Silver))
+                    {
+                        int bitmapHeight = bitmap.Height;
+
+                        grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 240));
+                        grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
+                        grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
+                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz, 直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
+                        grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
+
+                        grap.DrawString($"已缓存(K): {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
+                        grap.DrawString($"使用中(K): {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
+                        grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, br, new Point(5, bitmapHeight - 80));
+                        grap.DrawString($"当前帧: D {latestFrameDynamicsId}, K {latestFrameKinematicsId}, G {_GenerateCount}", _Font, br, new Point(5, bitmapHeight - 60));
+
+                        grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, br, new Point(5, bitmapHeight - 20));
+                    }
+
+                    _GenerateCount++;
                 }
                 else
                 {
@@ -610,15 +647,15 @@ namespace Multibody
                         }
 
                         _TransformFrequencyCounter.Update(particleCount);
+                    }
 
-                        using (Brush br = new SolidBrush(Color.Silver))
-                        {
-                            int bitmapHeight = bitmap.Height;
+                    using (Brush br = new SolidBrush(Color.Silver))
+                    {
+                        int bitmapHeight = bitmap.Height;
 
-                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 60));
-                            grap.DrawString($"    仿射变换(T): {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 40));
-                            grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
-                        }
+                        grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 60));
+                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 40));
+                        grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
                     }
                 }
             }
