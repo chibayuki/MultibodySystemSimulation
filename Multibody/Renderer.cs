@@ -30,7 +30,6 @@ using Texting = Com.Text;
 using VectorType = Com.Vector.Type;
 using UIMessage = Com.WinForm.UIMessage;
 using UIMessageProcessor = Com.WinForm.UIMessageProcessor;
-using static Multibody.Renderer;
 
 namespace Multibody
 {
@@ -451,25 +450,6 @@ namespace Multibody
 
         private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
 
-        // 仿射变换结果缓存。
-        internal sealed class TransformResultCache
-        {
-            public TransformResultCache()
-            {
-                TransformID = -1;
-                ScreenLocation = PointD.NaN;
-                DistanceToScreen = double.NaN;
-            }
-
-            public long TransformID { get; set; } // 变换相关的标识。
-
-            public PointD ScreenLocation { get; set; } // 屏幕坐标系的坐标。
-
-            public double DistanceToScreen { get; set; } // 到屏幕的距离（世界坐标系）。
-        }
-
-        private Dictionary<long, TransformResultCache[]> _ParticlesRenderData = new Dictionary<long, TransformResultCache[]>();
-
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
         {
@@ -523,28 +503,7 @@ namespace Multibody
                                 Particle particle1 = frame1.GetParticle(i);
                                 Particle particle2 = frame2.GetParticle(i);
 
-                                if (!_ParticlesRenderData.ContainsKey(frame1.KinematicsId))
-                                {
-                                    TransformResultCache[] cacheArray = new TransformResultCache[particleCount];
-                                    for (int k = 0; k < cacheArray.Length; k++)
-                                    {
-                                        cacheArray[k] = new TransformResultCache();
-                                    }
-                                    _ParticlesRenderData.Add(frame1.KinematicsId, cacheArray);
-                                }
-                                TransformResultCache cache1 = _ParticlesRenderData[frame1.KinematicsId][particle1.Id];
-
-                                if (!_ParticlesRenderData.ContainsKey(frame2.KinematicsId))
-                                {
-                                    TransformResultCache[] cacheArray = new TransformResultCache[particleCount];
-                                    for (int k = 0; k < cacheArray.Length; k++)
-                                    {
-                                        cacheArray[k] = new TransformResultCache();
-                                    }
-                                    _ParticlesRenderData.Add(frame2.KinematicsId, cacheArray);
-                                }
-                                TransformResultCache cache2 = _ParticlesRenderData[frame2.KinematicsId][particle2.Id];
-
+                                TransformResultCache cache1 = particle1.TransformResultCache;
                                 if (cache1.TransformID != _ViewParamChangedCount)
                                 {
                                     cache1.ScreenLocation = _WorldToScreen(particle1.Location, out double z);
@@ -554,6 +513,7 @@ namespace Multibody
                                     transformNum++;
                                 }
 
+                                TransformResultCache cache2 = particle2.TransformResultCache;
                                 if (cache2.TransformID != _ViewParamChangedCount)
                                 {
                                     cache2.ScreenLocation = _WorldToScreen(particle2.Location, out double z);
@@ -574,17 +534,7 @@ namespace Multibody
                         {
                             Particle particle = latestFrame.GetParticle(i);
 
-                            if (!_ParticlesRenderData.ContainsKey(latestFrame.KinematicsId))
-                            {
-                                TransformResultCache[] cacheArray = new TransformResultCache[particleCount];
-                                for (int k = 0; k < cacheArray.Length; k++)
-                                {
-                                    cacheArray[k] = new TransformResultCache();
-                                }
-                                _ParticlesRenderData.Add(latestFrame.KinematicsId, cacheArray);
-                            }
-                            TransformResultCache cache = _ParticlesRenderData[latestFrame.KinematicsId][particle.Id];
-
+                            TransformResultCache cache = particle.TransformResultCache;
                             if (cache.TransformID != _ViewParamChangedCount)
                             {
                                 cache.ScreenLocation = _WorldToScreen(particle.Location, out double z);
@@ -605,15 +555,6 @@ namespace Multibody
                                 {
                                     grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
                                 }
-                            }
-                        }
-
-                        long[] keys = _ParticlesRenderData.Keys.ToArray();
-                        foreach (long key in keys)
-                        {
-                            if (key < oldestFrame.KinematicsId)
-                            {
-                                _ParticlesRenderData.Remove(key);
                             }
                         }
 
@@ -651,36 +592,13 @@ namespace Multibody
                     {
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
-                        int transformNum = 0;
-
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = _SimulationData.GetParticle(i);
 
-                            if (!_ParticlesRenderData.ContainsKey(0))
-                            {
-                                TransformResultCache[] cacheArray = new TransformResultCache[particleCount];
-                                for (int k = 0; k < cacheArray.Length; k++)
-                                {
-                                    cacheArray[k] = new TransformResultCache();
-                                }
-                                _ParticlesRenderData.Add(0, cacheArray);
-                            }
-                            TransformResultCache cache = _ParticlesRenderData[0][particle.Id];
+                            PointD location = _WorldToScreen(particle.Location, out double z);
 
-                            if (cache.TransformID != _ViewParamChangedCount)
-                            {
-                                cache.ScreenLocation = _WorldToScreen(particle.Location, out double z);
-                                cache.DistanceToScreen = z;
-                                cache.TransformID = _ViewParamChangedCount;
-
-                                transformNum++;
-                            }
-
-                            PointD location = cache.ScreenLocation;
-                            double distance = cache.DistanceToScreen;
-
-                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / distance));
+                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
 
                             if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                             {
@@ -691,16 +609,15 @@ namespace Multibody
                             }
                         }
 
-                        if (transformNum > 0)
-                        {
-                            _TransformFrequencyCounter.Update(transformNum);
-                        }
+                        _TransformFrequencyCounter.Update(particleCount);
 
                         using (Brush br = new SolidBrush(Color.Silver))
                         {
                             int bitmapHeight = bitmap.Height;
 
-                            grap.DrawString($"帧率: {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
+                            grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 60));
+                            grap.DrawString($"    仿射变换(T): {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 40));
+                            grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
                         }
                     }
                 }

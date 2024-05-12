@@ -47,6 +47,33 @@ namespace Multibody
         public Color Color { get; private set; } // 颜色。
     }
 
+    // 仿射变换结果缓存。
+    internal sealed class TransformResultCache
+    {
+        public TransformResultCache()
+        {
+            TransformID = -1;
+            ScreenLocation = PointD.NaN;
+            DistanceToScreen = double.NaN;
+        }
+
+        public long TransformID { get; set; } // 变换相关的标识。
+
+        public PointD ScreenLocation { get; set; } // 屏幕坐标系的坐标。
+
+        public double DistanceToScreen { get; set; } // 到屏幕的距离（世界坐标系）。
+
+        public TransformResultCache Copy()
+        {
+            return new TransformResultCache()
+            {
+                TransformID = this.TransformID,
+                ScreenLocation = this.ScreenLocation,
+                DistanceToScreen = this.DistanceToScreen,
+            };
+        }
+    }
+
     // 粒子，表示三维空间中的有体积的质点。
     internal sealed class Particle
     {
@@ -57,6 +84,8 @@ namespace Multibody
         private PointD3D _Location; // 位置（米）。
         private PointD3D _Velocity; // 速度（米/秒）。
         private PointD3D _Force; // 作用力（牛顿）。
+
+        private TransformResultCache _TransformResultCache; // 仿射变换结果缓存。
 
         private Particle(ParticleConstantAttr constantAttr, PointD3D location, PointD3D velocity, PointD3D force)
         {
@@ -79,6 +108,8 @@ namespace Multibody
             _Location = location;
             _Velocity = velocity;
             _Force = force;
+
+            _TransformResultCache = new TransformResultCache();
         }
 
         private Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity, PointD3D force)
@@ -97,6 +128,8 @@ namespace Multibody
             _Location = location;
             _Velocity = velocity;
             _Force = force;
+
+            _TransformResultCache = new TransformResultCache();
         }
 
         public Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity) : this(id, mass, radius, color, location, velocity, PointD3D.Zero)
@@ -130,10 +163,27 @@ namespace Multibody
         // 获取此 Particle 对象的加速度（米/平方秒）。
         public PointD3D Acceleration => _Force / _ConstantAttr.Mass;
 
+        // 获取此 Particle 对象的加速度（米/平方秒）。
+        public TransformResultCache TransformResultCache
+        {
+            get
+            {
+                if (!_Frozen)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                return _TransformResultCache;
+            }
+        }
+
         // 返回此 Particle 对象的副本。
         public Particle Copy()
         {
-            return new Particle(_ConstantAttr, _Location, _Velocity, _Force);
+            return new Particle(_ConstantAttr, _Location, _Velocity, _Force)
+            {
+                _TransformResultCache = this._TransformResultCache.Copy()
+            };
         }
 
         // 将此 Particle 对象运动指定的时长（秒）。
