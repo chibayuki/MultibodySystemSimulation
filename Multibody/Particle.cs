@@ -17,8 +17,8 @@ using System.Threading.Tasks;
 
 using System.Drawing;
 
+using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
-using Com;
 
 namespace Multibody
 {
@@ -109,7 +109,7 @@ namespace Multibody
             _Velocity = velocity;
             _Force = force;
 
-            _TransformResultCache = new TransformResultCache();
+            _TransformResultCache = null;
         }
 
         private Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity, PointD3D force)
@@ -129,7 +129,7 @@ namespace Multibody
             _Velocity = velocity;
             _Force = force;
 
-            _TransformResultCache = new TransformResultCache();
+            _TransformResultCache = null;
         }
 
         public Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity) : this(id, mass, radius, color, location, velocity, PointD3D.Zero)
@@ -173,6 +173,11 @@ namespace Multibody
                     throw new InvalidOperationException();
                 }
 
+                if (_TransformResultCache is null)
+                {
+                    _TransformResultCache = new TransformResultCache();
+                }
+
                 return _TransformResultCache;
             }
         }
@@ -182,7 +187,7 @@ namespace Multibody
         {
             return new Particle(_ConstantAttr, _Location, _Velocity, _Force)
             {
-                _TransformResultCache = this._TransformResultCache.Copy()
+                _TransformResultCache = this._TransformResultCache?.Copy()
             };
         }
 

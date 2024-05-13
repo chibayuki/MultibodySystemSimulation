@@ -429,11 +429,14 @@ namespace Multibody
                                 PointD pt3 = _WorldToScreen(new PointD3D(x, y, z + _GridDistance), out _);
                                 transformNum += 4;
 
-                                double alpha = 255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5)));
-                                Color cr = Color.FromArgb(Math.Max(0, Math.Min(255, (int)alpha)), 64, 64, 64);
-                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true)) { lineNum++; }
-                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true)) { lineNum++; }
-                                if (Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true)) { lineNum++; }
+                                int alpha = (int)Math.Round(255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5))));
+                                if (alpha >= 1)
+                                {
+                                    Color cr = Color.FromArgb(Math.Min(255, alpha), 64, 64, 64);
+                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true)) { lineNum++; }
+                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true)) { lineNum++; }
+                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true)) { lineNum++; }
+                                }
                             }
                         }
                     }
@@ -534,7 +537,8 @@ namespace Multibody
                                 {
                                     if (pt1.DistanceFrom(pt2) >= 2 || k == 0)
                                     {
-                                        if (Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(255 * (j + k) / 2 / frameCount, latestFrame.GetParticle(i).Color), 1, true))
+                                        int alpha = (int)Math.Round(255.0 * j / frameCount);
+                                        if (alpha >= 1 && Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(Math.Min(255, alpha), latestFrame.GetParticle(i).Color), 1, true))
                                         {
                                             lineNum++;
                                         }
