@@ -273,12 +273,58 @@ namespace Multibody
             _DisposeGridBitmap();
         }
 
-        // 世界坐标系转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
-        private PointD _WorldToScreen(PointD3D pt, out double z)
+        // 将世界坐标系坐标转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
+        private bool _WorldToScreen(PointD3D pt, out PointD scrPt, out double z)
         {
             pt.AffineTransform(_AffineTransformation);
             z = pt.Z;
-            return pt.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+            if (z <= 0)
+            {
+                scrPt = PointD.NaN;
+                return false;
+            }
+            else
+            {
+                scrPt = pt.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                return true;
+            }
+        }
+
+        // 将世界坐标系直线段转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
+        private bool _WorldToScreen(PointD3D pt1, PointD3D pt2, out PointD scrPt1, out PointD scrPt2, out double z1, out double z2)
+        {
+            pt1.AffineTransform(_AffineTransformation);
+            pt2.AffineTransform(_AffineTransformation);
+            z1 = pt1.Z;
+            z2 = pt2.Z;
+            if (z1 <= 0 && z2 <= 0)
+            {
+                scrPt1 = PointD.NaN;
+                scrPt2 = PointD.NaN;
+                return false;
+            }
+            else if (z1 > 0 && z2 > 0)
+            {
+                scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                return true;
+            }
+            else
+            {
+                if (z1 > z2)
+                {
+                    scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                    pt2 = pt1 - (pt1 - pt2) * ((z1 - Math.Min(z1 / 2, _FocalLength / 1000)) / (z1 - z2));
+                    scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                }
+                else
+                {
+                    scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                    pt1 = pt2 - (pt2 - pt1) * ((z2 - Math.Min(z2 / 2, _FocalLength / 1000)) / (z2 - z1));
+                    scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                }
+                return true;
+            }
         }
 
         #endregion
@@ -423,20 +469,30 @@ namespace Multibody
                         {
                             for (double z = minZ; z <= maxZ; z += _GridDistance)
                             {
-                                PointD pt0 = _WorldToScreen(new PointD3D(x, y, z), out double ptZ);
-                                PointD pt1 = _WorldToScreen(new PointD3D(x + _GridDistance, y, z), out _);
-                                PointD pt2 = _WorldToScreen(new PointD3D(x, y + _GridDistance, z), out _);
-                                PointD pt3 = _WorldToScreen(new PointD3D(x, y, z + _GridDistance), out _);
-                                transformNum += 4;
-
-                                int alpha = (int)Math.Round(255 * Math.Pow(2, -(ptZ / (gridDepth * _SpaceMag / 5))));
-                                if (alpha >= 1)
+                                Action<PointD3D, PointD3D> DrawLine = (pt1, pt2) =>
                                 {
-                                    Color cr = Color.FromArgb(Math.Min(255, alpha), 64, 64, 64);
-                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt1, cr, 1, true)) { lineNum++; }
-                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt2, cr, 1, true)) { lineNum++; }
-                                    if (Painting2D.PaintLine(_GridBitmap, pt0, pt3, cr, 1, true)) { lineNum++; }
-                                }
+                                    if (_WorldToScreen(pt1, pt2, out PointD scrPt1, out PointD scrPt2, out double z1, out double z2))
+                                    {
+                                        int alpha = (int)Math.Round(255 * Math.Pow(2, -(Math.Min(z1, z2) / (gridDepth * _SpaceMag / 5))));
+                                        if (alpha >= 1)
+                                        {
+                                            Color cr = Color.FromArgb(Math.Min(255, alpha), 64, 64, 64);
+                                            if (Painting2D.PaintLine(_GridBitmap, scrPt1, scrPt2, cr, 1, true))
+                                            {
+                                                lineNum++;
+                                            }
+                                        }
+                                    }
+                                };
+
+                                PointD3D pt0 = new PointD3D(x, y, z);
+                                PointD3D ptX = new PointD3D(x + _GridDistance, y, z);
+                                PointD3D ptY = new PointD3D(x, y + _GridDistance, z);
+                                PointD3D ptZ = new PointD3D(x, y, z + _GridDistance);
+                                DrawLine(pt0, ptX);
+                                DrawLine(pt0, ptY);
+                                DrawLine(pt0, ptZ);
+                                transformNum += 6;
                             }
                         }
                     }
@@ -515,7 +571,8 @@ namespace Multibody
                                 TransformResultCache cache1 = particle1.TransformResultCache;
                                 if (cache1.TransformID != _ViewParamChangedCount)
                                 {
-                                    cache1.ScreenLocation = _WorldToScreen(particle1.Location, out double z);
+                                    _WorldToScreen(particle1.Location, out PointD pt, out double z);
+                                    cache1.ScreenLocation = pt;
                                     cache1.DistanceToScreen = z;
                                     cache1.TransformID = _ViewParamChangedCount;
                                     transformNum++;
@@ -526,7 +583,8 @@ namespace Multibody
                                 TransformResultCache cache2 = particle2.TransformResultCache;
                                 if (cache2.TransformID != _ViewParamChangedCount)
                                 {
-                                    cache2.ScreenLocation = _WorldToScreen(particle2.Location, out double z);
+                                    _WorldToScreen(particle2.Location, out PointD pt, out double z);
+                                    cache2.ScreenLocation = pt;
                                     cache2.DistanceToScreen = z;
                                     cache2.TransformID = _ViewParamChangedCount;
                                     transformNum++;
@@ -553,7 +611,8 @@ namespace Multibody
                                         cache2 = particle2.TransformResultCache;
                                         if (cache2.TransformID != _ViewParamChangedCount)
                                         {
-                                            cache2.ScreenLocation = _WorldToScreen(particle2.Location, out double z);
+                                            _WorldToScreen(particle2.Location, out PointD pt, out double z);
+                                            cache2.ScreenLocation = pt;
                                             cache2.DistanceToScreen = z;
                                             cache2.TransformID = _ViewParamChangedCount;
                                             transformNum++;
@@ -575,7 +634,8 @@ namespace Multibody
                             TransformResultCache cache = particle.TransformResultCache;
                             if (cache.TransformID != _ViewParamChangedCount)
                             {
-                                cache.ScreenLocation = _WorldToScreen(particle.Location, out double z);
+                                _WorldToScreen(particle.Location, out PointD pt, out double z);
+                                cache.ScreenLocation = pt;
                                 cache.DistanceToScreen = z;
                                 cache.TransformID = _ViewParamChangedCount;
 
@@ -638,15 +698,16 @@ namespace Multibody
                         {
                             Particle particle = _SimulationData.GetParticle(i);
 
-                            PointD location = _WorldToScreen(particle.Location, out double z);
-
-                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
-
-                            if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
+                            if (_WorldToScreen(particle.Location, out PointD pt, out double z))
                             {
-                                using (Brush Br = new SolidBrush(particle.Color))
+                                float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
+
+                                if (Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
                                 {
-                                    grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
+                                    using (Brush Br = new SolidBrush(particle.Color))
+                                    {
+                                        grap.FillEllipse(Br, new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2));
+                                    }
                                 }
                             }
                         }
