@@ -307,23 +307,22 @@ namespace Multibody
             {
                 scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
                 scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
-                return true;
+                return scrPt1 != scrPt2;
             }
             else
             {
                 if (z1 > z2)
                 {
                     scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
-                    pt2 = pt1 - (pt1 - pt2) * ((z1 - Math.Min(z1 / 2, _FocalLength / 1000)) / (z1 - z2));
-                    scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                    scrPt2 = (pt1 - (pt1 - pt2) * (z1 / (z1 - z2))).XY.Normalize * (Math.Max(scrPt1.Module, ((PointD)_ViewSize).Module) * 1000);
+                    // TODO: (pt1 - (pt1 - pt2) * (z1 / (z1 - z2))).XY 是零向量？
                 }
                 else
                 {
                     scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
-                    pt1 = pt2 - (pt2 - pt1) * ((z2 - Math.Min(z2 / 2, _FocalLength / 1000)) / (z2 - z1));
-                    scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                    scrPt1 = (pt2 - (pt2 - pt1) * (z2 / (z2 - z1))).XY.Normalize * (Math.Max(scrPt2.Module, ((PointD)_ViewSize).Module) * 1000);
                 }
-                return true;
+                return scrPt1 != scrPt2;
             }
         }
 
