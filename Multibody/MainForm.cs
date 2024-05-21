@@ -50,8 +50,9 @@ namespace Multibody
                 Caption = Application.ProductName,
                 ShowCaptionBarColor = false,
                 EnableCaptionBarTransparent = false,
+                EnableFullScreen = false,
                 Theme = Theme.Black,
-                ThemeColor = ColorManipulation.GetRandomColorX(),
+                ThemeColor = ColorManipulation.GetRandomColorX()
             };
 
             FormManager.Loading += Form_Loading;
@@ -132,9 +133,6 @@ namespace Multibody
 
             Panel_View.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
-            Label_PressedKey.ForeColor = FormManager.RecommendColors.Text_INC.ToColor();
-            Label_HelpMessage.ForeColor = FormManager.RecommendColors.Text.ToColor();
-
             Panel_SideBar.BackColor = FormManager.RecommendColors.Background_DEC.ToColor();
         }
 
@@ -163,67 +161,6 @@ namespace Multibody
 
         private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
 
-        private void _UpdatePressedKeyLabel()
-        {
-            if (_PressedKeys.Count == 0)
-            {
-                Label_PressedKey.Text = "Δx, Δy, Δz";
-            }
-            else if (_PressedKeys.Count == 1)
-            {
-                if (_PressedKeys.Contains(Keys.X))
-                {
-                    Label_PressedKey.Text = "Δx";
-                }
-                else if (_PressedKeys.Contains(Keys.Y))
-                {
-                    Label_PressedKey.Text = "Δy";
-                }
-                else if (_PressedKeys.Contains(Keys.Z))
-                {
-                    Label_PressedKey.Text = "Δz";
-                }
-                else if (_PressedKeys.Contains(Keys.R))
-                {
-                    Label_PressedKey.Text = "R+?";
-                }
-                else
-                {
-                    Label_PressedKey.Text = "?";
-                }
-            }
-            else if (_PressedKeys.Count == 2)
-            {
-                if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
-                {
-                    Label_PressedKey.Text = "Δx, Δy";
-                }
-                else if (_PressedKeys.Contains(Keys.R))
-                {
-                    if (_PressedKeys.Contains(Keys.X))
-                    {
-                        Label_PressedKey.Text = "Rx";
-                    }
-                    else if (_PressedKeys.Contains(Keys.Y))
-                    {
-                        Label_PressedKey.Text = "Ry";
-                    }
-                    else if (_PressedKeys.Contains(Keys.Z))
-                    {
-                        Label_PressedKey.Text = "Rz";
-                    }
-                    else
-                    {
-                        Label_PressedKey.Text = "?";
-                    }
-                }
-                else
-                {
-                    Label_PressedKey.Text = "?";
-                }
-            }
-        }
-
         private void Panel_View_MouseEnter(object sender, EventArgs e)
         {
             if (FormManager.IsActive)
@@ -235,7 +172,7 @@ namespace Multibody
         private void Panel_View_LostFocus(object sender, EventArgs e)
         {
             _PressedKeys.Clear();
-            _UpdatePressedKeyLabel();
+            _InteractiveManager.PressedKeysChanged(_PressedKeys);
         }
 
         private void Panel_View_KeyDown(object sender, KeyEventArgs e)
@@ -243,14 +180,14 @@ namespace Multibody
             if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z)
             {
                 _PressedKeys.Add(e.KeyCode);
-                _UpdatePressedKeyLabel();
+                _InteractiveManager.PressedKeysChanged(_PressedKeys);
             }
         }
 
         private void Panel_View_KeyUp(object sender, KeyEventArgs e)
         {
             _PressedKeys.Remove(e.KeyCode);
-            _UpdatePressedKeyLabel();
+            _InteractiveManager.PressedKeysChanged(_PressedKeys);
         }
 
         private void Panel_View_MouseDown(object sender, MouseEventArgs e)

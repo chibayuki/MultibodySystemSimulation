@@ -298,6 +298,19 @@ namespace Multibody
 
         //
 
+        public void PressedKeysChanged(HashSet<Keys> pressedKeys)
+        {
+            Keys[] data = Array.Empty<Keys>();
+            if (pressedKeys.Count > 0)
+            {
+                data = new Keys[pressedKeys.Count];
+                pressedKeys.CopyTo(data);
+            }
+            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.PressedKeysChanged) { RequestData = data });
+        }
+
+        //
+
         // 更新视图大小。
         public void UpdateViewSize(Size viewSize)
         {

@@ -28,14 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.Panel_Main = new System.Windows.Forms.Panel();
             this.Panel_SideBar = new System.Windows.Forms.Panel();
             this.Panel_View = new System.Windows.Forms.Panel();
-            this.Label_HelpMessage = new System.Windows.Forms.Label();
-            this.Label_PressedKey = new System.Windows.Forms.Label();
             this.Panel_Main.SuspendLayout();
-            this.Panel_View.SuspendLayout();
             this.SuspendLayout();
             // 
             // Panel_Main
@@ -62,36 +58,12 @@
             // Panel_View
             // 
             this.Panel_View.BackColor = System.Drawing.Color.Transparent;
-            this.Panel_View.Controls.Add(this.Label_HelpMessage);
-            this.Panel_View.Controls.Add(this.Label_PressedKey);
             this.Panel_View.Dock = System.Windows.Forms.DockStyle.Fill;
             this.Panel_View.Location = new System.Drawing.Point(0, 0);
             this.Panel_View.Name = "Panel_View";
             this.Panel_View.Size = new System.Drawing.Size(1200, 800);
             this.Panel_View.TabIndex = 0;
             this.Panel_View.Paint += new System.Windows.Forms.PaintEventHandler(this.Panel_View_Paint);
-            // 
-            // Label_HelpMessage
-            // 
-            this.Label_HelpMessage.AutoSize = true;
-            this.Label_HelpMessage.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.Label_HelpMessage.ForeColor = System.Drawing.Color.White;
-            this.Label_HelpMessage.Location = new System.Drawing.Point(0, 30);
-            this.Label_HelpMessage.Name = "Label_HelpMessage";
-            this.Label_HelpMessage.Size = new System.Drawing.Size(256, 136);
-            this.Label_HelpMessage.TabIndex = 0;
-            this.Label_HelpMessage.Text = resources.GetString("Label_HelpMessage.Text");
-            // 
-            // Label_PressedKey
-            // 
-            this.Label_PressedKey.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.Label_PressedKey.ForeColor = System.Drawing.Color.White;
-            this.Label_PressedKey.Location = new System.Drawing.Point(0, 0);
-            this.Label_PressedKey.Name = "Label_PressedKey";
-            this.Label_PressedKey.Size = new System.Drawing.Size(100, 30);
-            this.Label_PressedKey.TabIndex = 0;
-            this.Label_PressedKey.Text = "Δx, Δy, Δz";
-            this.Label_PressedKey.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // MainForm
             // 
@@ -104,8 +76,6 @@
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Panel_Main.ResumeLayout(false);
-            this.Panel_View.ResumeLayout(false);
-            this.Panel_View.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -115,7 +85,5 @@
         private System.Windows.Forms.Panel Panel_Main;
         private System.Windows.Forms.Panel Panel_View;
         private System.Windows.Forms.Panel Panel_SideBar;
-        private System.Windows.Forms.Label Label_PressedKey;
-        private System.Windows.Forms.Label Label_HelpMessage;
     }
 }

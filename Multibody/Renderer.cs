@@ -75,6 +75,8 @@ namespace Multibody
             ViewOperationUpdateParam,
             ViewOperationStop,
 
+            PressedKeysChanged,
+
             UpdateViewSize,
 
             SetTimeMag
@@ -114,6 +116,12 @@ namespace Multibody
 
                 case (int)MessageCode.ViewOperationStop:
                     _ViewOperationStop();
+                    break;
+
+                //
+
+                case (int)MessageCode.PressedKeysChanged:
+                    _PressedKeys = new HashSet<Keys>((Keys[])message.RequestData);
                     break;
 
                 //
@@ -512,6 +520,8 @@ namespace Multibody
         private double _LastSnapshotTime = 0; // 最近一次获取的快照的最新一帧的时刻。
         private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
 
+        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
+
         private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
 
         // 返回将多体系统的当前状态渲染得到的位图。
@@ -669,10 +679,11 @@ namespace Multibody
                     {
                         int bitmapHeight = bitmap.Height;
 
-                        grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 240));
-                        grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
-                        grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
-                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz, 直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
+                        grap.DrawString("频率:", _Font, br, new Point(5, bitmapHeight - 260));
+                        grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 240));
+                        grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
+                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
+                        grap.DrawString($"    直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
                         grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
 
                         grap.DrawString($"已缓存(K): {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
@@ -722,6 +733,57 @@ namespace Multibody
                         grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 40));
                         grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
                     }
+                }
+
+                bool pressedKeysAreLegal = false;
+                if (_PressedKeys.Count == 1)
+                {
+                    if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
+                    {
+                        pressedKeysAreLegal = true;
+                    }
+                }
+                else if (_PressedKeys.Count == 2)
+                {
+                    if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
+                    {
+                        pressedKeysAreLegal = true;
+                    }
+                    else if (_PressedKeys.Contains(Keys.R))
+                    {
+                        if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
+                        {
+                            pressedKeysAreLegal = true;
+                        }
+                    }
+                }
+                using (Font font1 = new Font("微软雅黑", 12F, FontStyle.Regular, GraphicsUnit.Point, 134))
+                using (Font font2 = new Font("微软雅黑", 12F, FontStyle.Bold, GraphicsUnit.Point, 134))
+                using (Brush br1 = new SolidBrush(Color.Gray))
+                using (Brush br2 = new SolidBrush(Color.Silver))
+                using (Pen pen1 = new Pen(br1, 1))
+                using (Pen pen2 = new Pen(br2, 2))
+                {
+                    Rectangle rectR = new Rectangle(10, 40, 30, 30);
+                    Rectangle rectX = new Rectangle(50, 40, 30, 30);
+                    Rectangle rectY = new Rectangle(90, 40, 30, 30);
+                    Rectangle rectZ = new Rectangle(130, 40, 30, 30);
+                    Action<Rectangle, Keys, string> DrawKey = (rect, key, str) =>
+                    {
+                        bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
+                        Font font = pressed ? font2 : font1;
+                        font = Texting.GetSuitableFont(str, font, rect.Size);
+                        SizeF size = grap.MeasureString(str, font);
+                        PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
+                        Pen pen = pressed ? pen2 : pen1;
+                        Brush br = pressed ? br2 : br1;
+                        grap.DrawRectangle(pen, rect);
+                        grap.DrawString(str, font, br, loc);
+                    };
+                    DrawKey(rectR, Keys.R, "R");
+                    DrawKey(rectX, Keys.X, "X");
+                    DrawKey(rectY, Keys.Y, "Y");
+                    DrawKey(rectZ, Keys.Z, "Z");
                 }
             }
 
