@@ -321,16 +321,44 @@ namespace Multibody
             {
                 if (z1 > z2)
                 {
-                    scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
-                    scrPt2 = (pt1 - (pt1 - pt2) * (z1 / (z1 - z2))).XY.Normalize * (Math.Max(scrPt1.Module, ((PointD)_ViewSize).Module) * 1000);
-                    // TODO: (pt1 - (pt1 - pt2) * (z1 / (z1 - z2))).XY 是零向量？
+                    PointD tmpPt = (pt1 - (pt1 - pt2) * (z1 / (z1 - z2))).XY;
+                    if (tmpPt.IsZero && pt1.XY.IsZero)
+                    {
+                        scrPt1 = PointD.NaN;
+                        scrPt2 = PointD.NaN;
+                        return false;
+                    }
+                    else
+                    {
+                        scrPt1 = pt1.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                        if (tmpPt.IsZero)
+                        {
+                            tmpPt = pt1.XY;
+                        }
+                        scrPt2 = tmpPt.Normalize * (Math.Max(scrPt1.Module, ((PointD)_ViewSize).Module) * 1000);
+                        return scrPt1 != scrPt2;
+                    }
                 }
                 else
                 {
-                    scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
-                    scrPt1 = (pt2 - (pt2 - pt1) * (z2 / (z2 - z1))).XY.Normalize * (Math.Max(scrPt2.Module, ((PointD)_ViewSize).Module) * 1000);
+                    PointD tmpPt = (pt2 - (pt2 - pt1) * (z2 / (z2 - z1))).XY;
+                    if (tmpPt.IsZero && pt2.XY.IsZero)
+                    {
+                        scrPt1 = PointD.NaN;
+                        scrPt2 = PointD.NaN;
+                        return false;
+                    }
+                    else
+                    {
+                        scrPt2 = pt2.ProjectToXY(PointD3D.Zero, _FocalLength).ScaleCopy(1 / _SpaceMag).OffsetCopy(new PointD(_ViewSize) / 2);
+                        if (tmpPt.IsZero)
+                        {
+                            tmpPt = pt2.XY;
+                        }
+                        scrPt1 = tmpPt.Normalize * (Math.Max(scrPt2.Module, ((PointD)_ViewSize).Module) * 1000);
+                        return scrPt1 != scrPt2;
+                    }
                 }
-                return scrPt1 != scrPt2;
             }
         }
 
