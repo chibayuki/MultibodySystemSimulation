@@ -25,6 +25,7 @@ using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
+using FormState = Com.WinForm.FormState;
 using Theme = Com.WinForm.Theme;
 
 namespace Multibody
@@ -50,7 +51,6 @@ namespace Multibody
                 Caption = Application.ProductName,
                 ShowCaptionBarColor = false,
                 EnableCaptionBarTransparent = false,
-                EnableFullScreen = false,
                 Theme = Theme.Black,
                 ThemeColor = ColorManipulation.GetRandomColorX()
             };
@@ -149,7 +149,7 @@ namespace Multibody
         #region 视图控制
 
         // 视图大小。
-        private Size _ViewSize => new Size(Panel_View.Width, FormManager.CaptionBarHeight + Panel_View.Height);
+        private Size _ViewSize => FormManager.Size;
 
         //
 
@@ -378,8 +378,16 @@ namespace Multibody
 
             if (_MultibodyBitmap != null)
             {
-                FormManager.CaptionBarBackgroundImage = _MultibodyBitmap;
-                Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
+                if (FormManager.FormState == FormState.FullScreen)
+                {
+                    FormManager.CaptionBarBackgroundImage = null;
+                    Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, 0));
+                }
+                else
+                {
+                    FormManager.CaptionBarBackgroundImage = _MultibodyBitmap;
+                    Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
+                }
             }
         }
 
@@ -387,7 +395,14 @@ namespace Multibody
         {
             if (_MultibodyBitmap != null)
             {
-                e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
+                if (FormManager.FormState == FormState.FullScreen)
+                {
+                    e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, 0));
+                }
+                else
+                {
+                    e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
+                }
             }
         }
 
