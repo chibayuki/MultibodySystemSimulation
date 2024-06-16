@@ -9,6 +9,9 @@ This file is part of "多体系统模拟" (MultibodySystemSimulation)
 "多体系统模拟" (MultibodySystemSimulation) is released under the GPLv3 license
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#define DrawImageOnCaptionBar
+#undef DrawImageOnCaptionBar
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,7 +28,9 @@ using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Statistics = Com.Statistics;
 using FormManager = Com.WinForm.FormManager;
+#if DrawImageOnCaptionBar
 using FormState = Com.WinForm.FormState;
+#endif
 using Theme = Com.WinForm.Theme;
 
 namespace Multibody
@@ -49,8 +54,13 @@ namespace Multibody
             FormManager = new FormManager(this, owner)
             {
                 Caption = Application.ProductName,
+#if DrawImageOnCaptionBar
                 ShowCaptionBarColor = false,
                 EnableCaptionBarTransparent = false,
+#else
+                ShowCaptionBarColor = true,
+                EnableCaptionBarTransparent = true,
+#endif
                 Theme = Theme.Black,
                 ThemeColor = ColorManipulation.GetRandomColorX()
             };
@@ -75,7 +85,7 @@ namespace Multibody
             const int v = 70;
             const int d = 37;
 
-            _InteractiveManager = new InteractiveManager(Panel_View, _RedrawMethod, _ViewSize);
+            _InteractiveManager = new InteractiveManager(PictureBox_View, _RedrawMethod, _ViewSize);
 
             int id = 0;
             _Particles = new List<Particle>()
@@ -93,14 +103,20 @@ namespace Multibody
 
             //
 
-            Panel_View.MouseEnter += Panel_View_MouseEnter;
-            Panel_View.LostFocus += Panel_View_LostFocus;
-            Panel_View.KeyDown += Panel_View_KeyDown;
-            Panel_View.KeyUp += Panel_View_KeyUp;
-            Panel_View.MouseDown += Panel_View_MouseDown;
-            Panel_View.MouseUp += Panel_View_MouseUp;
-            Panel_View.MouseMove += Panel_View_MouseMove;
-            Panel_View.MouseWheel += Panel_View_MouseWheel;
+            this.SetStyle(ControlStyles.UserPaint, true);
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+
+            //
+
+            PictureBox_View.MouseEnter += PictureBox_View_MouseEnter;
+            PictureBox_View.LostFocus += PictureBox_View_LostFocus;
+            PictureBox_View.KeyDown += PictureBox_View_KeyDown;
+            PictureBox_View.KeyUp += PictureBox_View_KeyUp;
+            PictureBox_View.MouseDown += PictureBox_View_MouseDown;
+            PictureBox_View.MouseUp += PictureBox_View_MouseUp;
+            PictureBox_View.MouseMove += PictureBox_View_MouseMove;
+            PictureBox_View.MouseWheel += PictureBox_View_MouseWheel;
 
             //
 
@@ -131,9 +147,7 @@ namespace Multibody
         {
             this.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
 
-            Panel_View.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
-
-            Panel_SideBar.BackColor = FormManager.RecommendColors.Background_DEC.ToColor();
+            PictureBox_View.BackColor = FormManager.RecommendColors.FormBackground.ToColor();
         }
 
         #endregion
@@ -149,7 +163,11 @@ namespace Multibody
         #region 视图控制
 
         // 视图大小。
+#if DrawImageOnCaptionBar
         private Size _ViewSize => FormManager.Size;
+#else
+        private Size _ViewSize => FormManager.ClientSize;
+#endif
 
         //
 
@@ -161,21 +179,21 @@ namespace Multibody
 
         private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
 
-        private void Panel_View_MouseEnter(object sender, EventArgs e)
+        private void PictureBox_View_MouseEnter(object sender, EventArgs e)
         {
             if (FormManager.IsActive)
             {
-                Panel_View.Focus();
+                PictureBox_View.Focus();
             }
         }
 
-        private void Panel_View_LostFocus(object sender, EventArgs e)
+        private void PictureBox_View_LostFocus(object sender, EventArgs e)
         {
             _PressedKeys.Clear();
             _InteractiveManager.PressedKeysChanged(_PressedKeys);
         }
 
-        private void Panel_View_KeyDown(object sender, KeyEventArgs e)
+        private void PictureBox_View_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z)
             {
@@ -184,13 +202,13 @@ namespace Multibody
             }
         }
 
-        private void Panel_View_KeyUp(object sender, KeyEventArgs e)
+        private void PictureBox_View_KeyUp(object sender, KeyEventArgs e)
         {
             _PressedKeys.Remove(e.KeyCode);
             _InteractiveManager.PressedKeysChanged(_PressedKeys);
         }
 
-        private void Panel_View_MouseDown(object sender, MouseEventArgs e)
+        private void PictureBox_View_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -200,7 +218,7 @@ namespace Multibody
             }
         }
 
-        private void Panel_View_MouseUp(object sender, MouseEventArgs e)
+        private void PictureBox_View_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -209,7 +227,7 @@ namespace Multibody
             }
         }
 
-        private void Panel_View_MouseMove(object sender, MouseEventArgs e)
+        private void PictureBox_View_MouseMove(object sender, MouseEventArgs e)
         {
             if (_AdjustingViewNow)
             {
@@ -266,7 +284,7 @@ namespace Multibody
             }
         }
 
-        private void Panel_View_MouseWheel(object sender, MouseEventArgs e)
+        private void PictureBox_View_MouseWheel(object sender, MouseEventArgs e)
         {
             if (!_AdjustingViewNow)
             {
@@ -378,31 +396,27 @@ namespace Multibody
 
             if (_MultibodyBitmap != null)
             {
+#if DrawImageOnCaptionBar
                 if (FormManager.FormState == FormState.FullScreen)
                 {
                     FormManager.CaptionBarBackgroundImage = null;
-                    Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, 0));
+                    PictureBox_View.Image = _MultibodyBitmap;
                 }
                 else
                 {
                     FormManager.CaptionBarBackgroundImage = _MultibodyBitmap;
-                    Panel_View.CreateGraphics().DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
-                }
-            }
-        }
 
-        private void Panel_View_Paint(object sender, PaintEventArgs e)
-        {
-            if (_MultibodyBitmap != null)
-            {
-                if (FormManager.FormState == FormState.FullScreen)
-                {
-                    e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, 0));
+                    Bitmap bmp = new Bitmap(PictureBox_View.Width, PictureBox_View.Height);
+                    using (Graphics graph = Graphics.FromImage(bmp))
+                    {
+                        graph.DrawImage(bitmap, new Point(0, -FormManager.CaptionBarHeight));
+                    }
+                    PictureBox_View.Image?.Dispose();
+                    PictureBox_View.Image = bmp;
                 }
-                else
-                {
-                    e.Graphics.DrawImage(_MultibodyBitmap, new Point(0, -FormManager.CaptionBarHeight));
-                }
+#else
+                PictureBox_View.Image = _MultibodyBitmap;
+#endif
             }
         }
 

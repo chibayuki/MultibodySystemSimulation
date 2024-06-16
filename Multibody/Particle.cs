@@ -34,6 +34,7 @@ namespace Multibody
             Density = mass * 0.75 / Math.PI / (radius * radius * radius);
 
             Color = color;
+            Brush = new SolidBrush(Color);
         }
 
         public int Id { get; private set; } // ID。
@@ -45,6 +46,8 @@ namespace Multibody
         public double Density { get; private set; } // 密度。
 
         public Color Color { get; private set; } // 颜色。
+
+        public Brush Brush { get; private set; } // 画刷。
     }
 
     // 仿射变换结果缓存。
@@ -150,6 +153,9 @@ namespace Multibody
 
         // 获取此 Particle 对象的颜色。
         public Color Color => _ConstantAttr.Color;
+
+        // 获取此 Particle 对象的画刷。
+        public Brush Brush => _ConstantAttr.Brush;
 
         // 获取此 Particle 对象的位置（米）。
         public PointD3D Location => _Location;

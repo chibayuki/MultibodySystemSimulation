@@ -85,7 +85,7 @@ namespace Multibody
         #region 粒子与多体系统（静态数据）
 
         private double _DynamicsResolution = 1; // 动力学分辨率（秒），指期待每次求解动力学微分方程组的时间微元 dT，表现为仿真计算的精确程度。
-        private double _KinematicsResolution = 1000; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
+        private double _KinematicsResolution = 200; // 运动学分辨率（秒），指期待每次抽取运动学状态的时间间隔 ΔT，表现为轨迹绘制的平滑程度。
         private double _CacheSize = 2000000; // 缓存大小（秒），指缓存运动学状态的最大时间跨度。
         private double _TrackLength = 1000000; // 轨迹长度（秒）。
 

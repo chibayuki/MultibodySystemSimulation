@@ -29,41 +29,29 @@
         private void InitializeComponent()
         {
             this.Panel_Main = new System.Windows.Forms.Panel();
-            this.Panel_SideBar = new System.Windows.Forms.Panel();
-            this.Panel_View = new System.Windows.Forms.Panel();
+            this.PictureBox_View = new System.Windows.Forms.PictureBox();
             this.Panel_Main.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PictureBox_View)).BeginInit();
             this.SuspendLayout();
             // 
             // Panel_Main
             // 
             this.Panel_Main.BackColor = System.Drawing.Color.Transparent;
-            this.Panel_Main.Controls.Add(this.Panel_SideBar);
-            this.Panel_Main.Controls.Add(this.Panel_View);
+            this.Panel_Main.Controls.Add(this.PictureBox_View);
             this.Panel_Main.Dock = System.Windows.Forms.DockStyle.Fill;
             this.Panel_Main.Location = new System.Drawing.Point(0, 0);
             this.Panel_Main.Name = "Panel_Main";
             this.Panel_Main.Size = new System.Drawing.Size(1200, 800);
             this.Panel_Main.TabIndex = 0;
             // 
-            // Panel_SideBar
+            // PictureBox_View
             // 
-            this.Panel_SideBar.BackColor = System.Drawing.Color.Transparent;
-            this.Panel_SideBar.Dock = System.Windows.Forms.DockStyle.Right;
-            this.Panel_SideBar.Location = new System.Drawing.Point(900, 0);
-            this.Panel_SideBar.Name = "Panel_SideBar";
-            this.Panel_SideBar.Size = new System.Drawing.Size(300, 800);
-            this.Panel_SideBar.TabIndex = 0;
-            this.Panel_SideBar.Visible = false;
-            // 
-            // Panel_View
-            // 
-            this.Panel_View.BackColor = System.Drawing.Color.Transparent;
-            this.Panel_View.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.Panel_View.Location = new System.Drawing.Point(0, 0);
-            this.Panel_View.Name = "Panel_View";
-            this.Panel_View.Size = new System.Drawing.Size(1200, 800);
-            this.Panel_View.TabIndex = 0;
-            this.Panel_View.Paint += new System.Windows.Forms.PaintEventHandler(this.Panel_View_Paint);
+            this.PictureBox_View.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PictureBox_View.Location = new System.Drawing.Point(0, 0);
+            this.PictureBox_View.Name = "PictureBox_View";
+            this.PictureBox_View.Size = new System.Drawing.Size(1200, 800);
+            this.PictureBox_View.TabIndex = 0;
+            this.PictureBox_View.TabStop = false;
             // 
             // MainForm
             // 
@@ -76,6 +64,7 @@
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Panel_Main.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.PictureBox_View)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -83,7 +72,6 @@
         #endregion
 
         private System.Windows.Forms.Panel Panel_Main;
-        private System.Windows.Forms.Panel Panel_View;
-        private System.Windows.Forms.Panel Panel_SideBar;
+        private System.Windows.Forms.PictureBox PictureBox_View;
     }
 }

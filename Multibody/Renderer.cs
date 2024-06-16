@@ -156,8 +156,7 @@ namespace Multibody
         // 仿真开始。
         private void _SimulationStart()
         {
-            _LastGenerateTime = DateTime.MinValue;
-            _LastSnapshotTime = 0;
+            _SimulationStartTime = DateTime.UtcNow;
             _GenerateCount = 0;
 
             //
@@ -406,7 +405,7 @@ namespace Multibody
 
         private FrequencyCounter _DrawLineFrequencyCounter = new FrequencyCounter(); // 绘制直线的频率计数器。
 
-        Bitmap _GridBitmap = null; // 坐标系网格位图。
+        private Bitmap _GridBitmap = null; // 坐标系网格位图。
 
         // 删除坐标系网格位图。
         private void _DisposeGridBitmap()
@@ -544,13 +543,19 @@ namespace Multibody
             }
         }
 
-        private DateTime _LastGenerateTime = DateTime.MinValue; // 最近一次渲染的日期时间。
-        private double _LastSnapshotTime = 0; // 最近一次获取的快照的最新一帧的时刻。
+        private DateTime _SimulationStartTime = DateTime.MinValue; // 仿真开始的日期时间。
         private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
 
-        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
+        private static Font _FPSInfoFont = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
+        private static Brush _FPSInfoBrush = new SolidBrush(Color.Gray);
 
-        private Font _Font = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
+        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
+        private static Font _UnpressedKeyFont = new Font("微软雅黑", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+        private static Font _PressedKeyFont = new Font("微软雅黑", 12F, FontStyle.Bold, GraphicsUnit.Point, 134);
+        private static Brush _UnpressedKeyBrush = new SolidBrush(Color.Gray);
+        private static Brush _PressedKeyBrush = new SolidBrush(Color.Silver);
+        private static Pen _UnpressedKeyPen = new Pen(Color.Gray, 1);
+        private static Pen _PressedKeyPen = new Pen(Color.Silver, 2);
 
         // 返回将多体系统的当前状态渲染得到的位图。
         private Bitmap _GenerateBitmap()
@@ -565,21 +570,7 @@ namespace Multibody
 
                 if (_SimulationIsRunning)
                 {
-                    DateTime lastGenerateTime;
-
-                    if (_LastGenerateTime == DateTime.MinValue)
-                    {
-                        lastGenerateTime = DateTime.Now;
-                    }
-                    else
-                    {
-                        lastGenerateTime = _LastGenerateTime;
-                    }
-
-                    _LastGenerateTime = DateTime.Now;
-
-                    double time = _LastSnapshotTime + (DateTime.Now - lastGenerateTime).TotalSeconds * _TimeMag;
-
+                    double time = (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag;
                     Snapshot snapshot = _SimulationData.GetSnapshot(time - _SimulationData.TrackLength, time);
 
                     long latestFrameDynamicsId = -1, latestFrameKinematicsId = -1;
@@ -588,7 +579,6 @@ namespace Multibody
                         int frameCount = snapshot.FrameCount;
 
                         Frame latestFrame = snapshot.LatestFrame;
-                        _LastSnapshotTime = latestFrame.Time;
                         latestFrameDynamicsId = latestFrame.DynamicsId;
                         latestFrameKinematicsId = latestFrame.KinematicsId;
                         int particleCount = latestFrame.ParticleCount;
@@ -600,6 +590,7 @@ namespace Multibody
 
                         if (frameCount > 1)
                         {
+                            const double MinLineLength = 3;
                             for (int i = 0; i < particleCount; i++)
                             {
                                 int j = frameCount - 1, k = frameCount - 2;
@@ -630,7 +621,7 @@ namespace Multibody
 
                                 while (true)
                                 {
-                                    if (pt1.DistanceFrom(pt2) >= 2 || k == 0)
+                                    if (pt1.DistanceFrom(pt2) >= MinLineLength || k == 0)
                                     {
                                         int alpha = (int)Math.Round(255.0 * j / frameCount);
                                         if (alpha >= 1 && Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(Math.Min(255, alpha), latestFrame.GetParticle(i).Color), 1, true))
@@ -686,10 +677,7 @@ namespace Multibody
 
                             if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                             {
-                                using (Brush Br = new SolidBrush(particle.Color))
-                                {
-                                    grap.FillEllipse(Br, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
-                                }
+                                grap.FillEllipse(particle.Brush, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
                             }
                         }
 
@@ -703,24 +691,19 @@ namespace Multibody
                         }
                     }
 
-                    using (Brush br = new SolidBrush(Color.Silver))
-                    {
-                        int bitmapHeight = bitmap.Height;
-
-                        grap.DrawString("频率:", _Font, br, new Point(5, bitmapHeight - 260));
-                        grap.DrawString($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 240));
-                        grap.DrawString($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz", _Font, br, new Point(5, bitmapHeight - 220));
-                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 200));
-                        grap.DrawString($"    直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 180));
-                        grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 160));
-
-                        grap.DrawString($"已缓存(K): {_SimulationData.CachedFrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 120));
-                        grap.DrawString($"使用中(K): {snapshot.FrameCount} 帧", _Font, br, new Point(5, bitmapHeight - 100));
-                        grap.DrawString($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}", _Font, br, new Point(5, bitmapHeight - 80));
-                        grap.DrawString($"当前帧: D {latestFrameDynamicsId}, K {latestFrameKinematicsId}, G {_GenerateCount}", _Font, br, new Point(5, bitmapHeight - 60));
-
-                        grap.DrawString($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}", _Font, br, new Point(5, bitmapHeight - 20));
-                    }
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("频率:\n");
+                    sb.Append($"    动力学方程(D): {_SimulationData.DynamicsPFS:N1} Hz\n");
+                    sb.Append($"    轨迹(K): {_SimulationData.KinematicsPFS:N1} Hz\n");
+                    sb.Append($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"    直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                    sb.Append($"已缓存(K): {_SimulationData.CachedFrameCount} 帧\n");
+                    sb.Append($"使用中(K): {snapshot.FrameCount} 帧\n");
+                    sb.Append($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}\n");
+                    sb.Append($"当前帧: D {latestFrameDynamicsId}, K {latestFrameKinematicsId}, G {_GenerateCount}\n\n");
+                    sb.Append($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(snapshot.LatestFrame.Time))}");
+                    grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 215));
 
                     _GenerateCount++;
                 }
@@ -742,10 +725,7 @@ namespace Multibody
 
                                 if (Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
                                 {
-                                    using (Brush Br = new SolidBrush(particle.Color))
-                                    {
-                                        grap.FillEllipse(Br, new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2));
-                                    }
+                                    grap.FillEllipse(particle.Brush, new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2));
                                 }
                             }
                         }
@@ -753,14 +733,11 @@ namespace Multibody
                         _TransformFrequencyCounter.Update(particleCount);
                     }
 
-                    using (Brush br = new SolidBrush(Color.Silver))
-                    {
-                        int bitmapHeight = bitmap.Height;
-
-                        grap.DrawString("帧率:", _Font, br, new Point(5, bitmapHeight - 60));
-                        grap.DrawString($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz", _Font, br, new Point(5, bitmapHeight - 40));
-                        grap.DrawString($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS", _Font, br, new Point(5, bitmapHeight - 20));
-                    }
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("频率:\n");
+                    sb.Append($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                    grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
                 }
 
                 bool pressedKeysAreLegal = false;
@@ -785,34 +762,26 @@ namespace Multibody
                         }
                     }
                 }
-                using (Font font1 = new Font("微软雅黑", 12F, FontStyle.Regular, GraphicsUnit.Point, 134))
-                using (Font font2 = new Font("微软雅黑", 12F, FontStyle.Bold, GraphicsUnit.Point, 134))
-                using (Brush br1 = new SolidBrush(Color.Gray))
-                using (Brush br2 = new SolidBrush(Color.Silver))
-                using (Pen pen1 = new Pen(br1, 1))
-                using (Pen pen2 = new Pen(br2, 2))
+                Rectangle rectR = new Rectangle(10, 10, 30, 30);
+                Rectangle rectX = new Rectangle(50, 10, 30, 30);
+                Rectangle rectY = new Rectangle(90, 10, 30, 30);
+                Rectangle rectZ = new Rectangle(130, 10, 30, 30);
+                Action<Rectangle, Keys, string> DrawKey = (rect, key, str) =>
                 {
-                    Rectangle rectR = new Rectangle(10, 40, 30, 30);
-                    Rectangle rectX = new Rectangle(50, 40, 30, 30);
-                    Rectangle rectY = new Rectangle(90, 40, 30, 30);
-                    Rectangle rectZ = new Rectangle(130, 40, 30, 30);
-                    Action<Rectangle, Keys, string> DrawKey = (rect, key, str) =>
-                    {
-                        bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
-                        Font font = pressed ? font2 : font1;
-                        font = Texting.GetSuitableFont(str, font, rect.Size);
-                        SizeF size = grap.MeasureString(str, font);
-                        PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
-                        Pen pen = pressed ? pen2 : pen1;
-                        Brush br = pressed ? br2 : br1;
-                        grap.DrawRectangle(pen, rect);
-                        grap.DrawString(str, font, br, loc);
-                    };
-                    DrawKey(rectR, Keys.R, "R");
-                    DrawKey(rectX, Keys.X, "X");
-                    DrawKey(rectY, Keys.Y, "Y");
-                    DrawKey(rectZ, Keys.Z, "Z");
-                }
+                    bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
+                    Font font = pressed ? _PressedKeyFont : _UnpressedKeyFont;
+                    font = Texting.GetSuitableFont(str, font, rect.Size);
+                    SizeF size = grap.MeasureString(str, font);
+                    PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
+                    Pen pen = pressed ? _PressedKeyPen : _UnpressedKeyPen;
+                    Brush br = pressed ? _PressedKeyBrush : _UnpressedKeyBrush;
+                    grap.DrawRectangle(pen, rect);
+                    grap.DrawString(str, font, br, loc);
+                };
+                DrawKey(rectR, Keys.R, "R");
+                DrawKey(rectX, Keys.X, "X");
+                DrawKey(rectY, Keys.Y, "Y");
+                DrawKey(rectZ, Keys.Z, "Z");
             }
 
             return bitmap;
