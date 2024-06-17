@@ -24,7 +24,7 @@ namespace Multibody
 
         public Snapshot(IEnumerable<Frame> frames)
         {
-            if (frames is null)
+            if (frames is null || !frames.Any())
             {
                 throw new ArgumentNullException();
             }

@@ -33,8 +33,6 @@ namespace Multibody
         private FrequencyCounter _DynamicsFrequencyCounter = new FrequencyCounter(); // 动力学频率计数器。
         private FrequencyCounter _KinematicsFrequencyCounter = new FrequencyCounter(); // 运动学频率计数器。
 
-        private Snapshot _LastSnapshot; // 最近一次获取的快照。
-
         public MultibodySystem(double dynamicsResolution, double kinematicsResolution, double cacheSize, params Particle[] particles)
         {
             Reset(dynamicsResolution, kinematicsResolution, cacheSize, particles);
@@ -174,8 +172,6 @@ namespace Multibody
 
             _DynamicsFrequencyCounter.Reset();
             _KinematicsFrequencyCounter.Reset();
-
-            _LastSnapshot = null;
         }
 
         // 重新设置此 MultibodySystem 对象的参数与所有粒子。
@@ -215,8 +211,6 @@ namespace Multibody
 
             _DynamicsFrequencyCounter.Reset();
             _KinematicsFrequencyCounter.Reset();
-
-            _LastSnapshot = null;
         }
 
         // 重新设置此 MultibodySystem 对象的参数与所有粒子。
@@ -235,131 +229,115 @@ namespace Multibody
         // 获取此 MultibodySystem 对象在指定时间区间内的快照。
         public Snapshot GetSnapshot(double startTime, double endTime)
         {
-            List<Frame> frames = new List<Frame>();
-
             int L = 0, R = _FrameHistory.Count - 1;
 
-            if (_FrameHistory[R].Time > endTime)
+            if (startTime > endTime || startTime > _FrameHistory[R].Time || endTime < _FrameHistory[L].Time)
+            {
+                return null;
+            }
+
+            if (startTime == _FrameHistory[R].Time)
+            {
+                return new Snapshot(new Frame[] { _FrameHistory[R] });
+            }
+
+            if (endTime == _FrameHistory[L].Time)
+            {
+                return new Snapshot(new Frame[] { _FrameHistory[L] });
+            }
+
+            if (endTime < _FrameHistory[R].Time)
             {
                 int endL = L, endR = R;
 
-                bool fondEqual = false;
-
                 while (endL < endR)
                 {
-                    int m = endL + (endR - endL) / 2;
-
-                    if (_FrameHistory[m].Time == endTime)
+                    if (endR - endL >= 2)
                     {
-                        R = m;
-                        fondEqual = true;
+                        int m = (endL + endR) / 2;
 
+                        if (endTime == _FrameHistory[m].Time)
+                        {
+                            R = m;
+                            break;
+                        }
+                        else if (endTime > _FrameHistory[m].Time)
+                        {
+                            endL = m;
+                        }
+                        else
+                        {
+                            endR = m;
+                        }
+                    }
+                    else
+                    {
+                        if (endTime - _FrameHistory[endL].Time < _FrameHistory[endR].Time - endTime)
+                        {
+                            R = endL;
+                        }
+                        else
+                        {
+                            R = endR;
+                        }
                         break;
-                    }
-                    else if (_FrameHistory[m].Time < endTime)
-                    {
-                        endL = m + 1;
-                    }
-                    else
-                    {
-                        endR = m - 1;
-                    }
-                }
-
-                if (!fondEqual)
-                {
-                    if (_FrameHistory[endR].Time > endTime)
-                    {
-                        endL--;
-                    }
-                    else
-                    {
-                        endR++;
-                    }
-
-                    if (_FrameHistory[endR].Time - endTime < endTime - _FrameHistory[endL].Time)
-                    {
-                        R = endR;
-                    }
-                    else
-                    {
-                        R = endL;
                     }
                 }
             }
 
-            if (_FrameHistory[L].Time < startTime)
+            if (startTime > _FrameHistory[L].Time)
             {
                 int startL = L, startR = R;
 
-                bool fondEqual = false;
-
                 while (startL < startR)
                 {
-                    int m = startL + (startR - startL) / 2;
-
-                    if (_FrameHistory[m].Time == startTime)
+                    if (startR - startL >= 2)
                     {
-                        L = m;
-                        fondEqual = true;
+                        int m = (startL + startR) / 2;
 
+                        if (startTime == _FrameHistory[m].Time)
+                        {
+                            L = m;
+
+                            break;
+                        }
+                        else if (startTime > _FrameHistory[m].Time)
+                        {
+                            startL = m;
+                        }
+                        else
+                        {
+                            startR = m;
+                        }
+                    }
+                    else
+                    {
+                        if (startTime - _FrameHistory[startL].Time < _FrameHistory[startR].Time - startTime)
+                        {
+                            L = startL;
+                        }
+                        else
+                        {
+                            L = startR;
+                        }
                         break;
-                    }
-                    else if (_FrameHistory[m].Time < startTime)
-                    {
-                        startL = m + 1;
-                    }
-                    else
-                    {
-                        startR = m - 1;
-                    }
-                }
-
-                if (!fondEqual)
-                {
-                    if (_FrameHistory[startL].Time < startTime)
-                    {
-                        startR++;
-                    }
-                    else
-                    {
-                        startL--;
-                    }
-
-                    if (endTime - _FrameHistory[startL].Time < _FrameHistory[startR].Time - endTime)
-                    {
-                        L = startL;
-                    }
-                    else
-                    {
-                        L = startR;
                     }
                 }
             }
 
             if (R > L)
             {
-                if (_LastSnapshot != null && _LastSnapshot.FrameCount > 1 && _LastSnapshot.OldestFrame.KinematicsId == _FrameHistory[L].KinematicsId && _LastSnapshot.LatestFrame.KinematicsId == _FrameHistory[R].KinematicsId)
-                {
-                    return _LastSnapshot;
-                }
-
+                List<Frame> frames = new List<Frame>();
                 for (int i = L; i < R; i++)
                 {
                     frames.Add(_FrameHistory[i]);
                 }
+                return new Snapshot(frames);
             }
             else
             {
-                if (_LastSnapshot != null && _LastSnapshot.FrameCount == 1 && _LastSnapshot.LatestFrame.KinematicsId == _FrameHistory[R].KinematicsId)
-                {
-                    return _LastSnapshot;
-                }
-
-                frames.Add(_FrameHistory[R]);
+                return new Snapshot(new Frame[] { _FrameHistory[R] });
             }
-
-            return new Snapshot(frames);
         }
 
         // 丢弃此 MultibodySystem 对象在指定时刻之前的缓存。

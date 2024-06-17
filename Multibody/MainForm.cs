@@ -85,8 +85,6 @@ namespace Multibody
             const int v = 70;
             const int d = 37;
 
-            _InteractiveManager = new InteractiveManager(PictureBox_View, _RedrawMethod, _ViewSize);
-
             int id = 0;
             _Particles = new List<Particle>()
             {
@@ -94,6 +92,13 @@ namespace Multibody
                 new Particle(id++, 1E3, 2, ColorX.FromHSL((h + d * id) % 360, s, v).ToColor(), new PointD3D(0, -200, 1400), new PointD3D(0.001, 0.001, 0)),
                 new Particle(id++, 1E1, 2, ColorX.FromHSL((h + d * id) % 360, s, v).ToColor(), new PointD3D(-200, 0, 2000), new PointD3D(0.0007, -0.0007, 0))
             };
+
+            _InteractiveManager = new InteractiveManager(PictureBox_View, _RedrawMethod, _ViewSize);
+
+            foreach (Particle particle in _Particles)
+            {
+                _InteractiveManager.AddParticle(particle);
+            }
         }
 
         private void Form_Loaded(object sender, EventArgs e)
@@ -119,11 +124,6 @@ namespace Multibody
             PictureBox_View.MouseWheel += PictureBox_View_MouseWheel;
 
             //
-
-            foreach (Particle particle in _Particles)
-            {
-                _InteractiveManager.AddParticle(particle);
-            }
 
             _InteractiveManager.SimulationStart();
         }

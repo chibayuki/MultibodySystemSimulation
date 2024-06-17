@@ -349,6 +349,28 @@ namespace Multibody
             }
         }
 
+        // 获取多体系统的缓存容量。
+        public int CacheCapacity
+        {
+            get
+            {
+                int result = 0;
+
+                _MultibodySystemLock.EnterReadLock();
+
+                try
+                {
+                    result = _MultibodySystem.FrameCapacity;
+                }
+                finally
+                {
+                    _MultibodySystemLock.ExitReadLock();
+                }
+
+                return result;
+            }
+        }
+
         // 获取多体系统当前已缓存的总帧数。
         public int CachedFrameCount
         {
@@ -498,13 +520,13 @@ namespace Multibody
                 _MultibodySystemLock.ExitReadLock();
             }
 
-            if (snapshot.FrameCount > 0)
+            if (snapshot != null && snapshot.FrameCount > 0)
             {
                 _MultibodySystemLock.EnterWriteLock();
 
                 try
                 {
-                    _MultibodySystem.DiscardCache(snapshot.OldestFrame.Time);
+                    _MultibodySystem.DiscardCache(Math.Min(startTime, snapshot.OldestFrame.Time));
                 }
                 finally
                 {

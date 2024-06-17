@@ -15,6 +15,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.Diagnostics;
+
 using UIMessage = Com.WinForm.UIMessage;
 using UIMessageProcessor = Com.WinForm.UIMessageProcessor;
 
@@ -53,16 +55,20 @@ namespace Multibody
 
             //
 
-            for (int i = 0; i < 10; i++)
+            if (!_SimulationData.CacheIsFull)
             {
-                if (!_SimulationData.CacheIsFull)
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                int num = Math.Max(1, (int)Math.Ceiling(_SimulationData.TimeMag * 0.03 / _SimulationData.KinematicsResolution));
+                for (int i = 0; i < num; i++)
                 {
-                    _SimulationData.NextMoment(_SimulationData.KinematicsResolution);
+                    _SimulationData.NextMoment();
+                    if (sw.ElapsedMilliseconds >= 15 || _SimulationData.CacheIsFull)
+                    {
+                        break;
+                    }
                 }
-                else
-                {
-                    break;
-                }
+                sw.Stop();
             }
         }
 
