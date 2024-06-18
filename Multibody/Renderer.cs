@@ -673,6 +673,8 @@ namespace Multibody
                             }
                         }
 
+                        int lowRadius = Math.Min(bitmap.Width, bitmap.Height) / 2;
+                        int highRadius = Math.Max(lowRadius * 2, Math.Max(bitmap.Width, bitmap.Height) / 2);
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = latestFrame.GetParticle(i);
@@ -697,9 +699,25 @@ namespace Multibody
 
                             float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / distance));
 
-                            if (Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
+                            if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
                             {
-                                grap.FillEllipse(particle.Brush, new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2));
+                                RectangleF ellipse = new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2);
+                                if (radius <= lowRadius)
+                                {
+                                    grap.FillEllipse(particle.Brush, ellipse);
+                                }
+                                else
+                                {
+                                    int alpha = (int)Math.Round(255 * (highRadius - radius) / (highRadius - lowRadius));
+                                    if (alpha >= 1)
+                                    {
+                                        Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
+                                        using (SolidBrush br = new SolidBrush(cr))
+                                        {
+                                            grap.FillEllipse(br, ellipse);
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -714,7 +732,7 @@ namespace Multibody
                     }
 
                     StringBuilder sb = new StringBuilder();
-                    sb.Append("频率:\n");
+                    sb.Append("性能:\n");
                     double dynamicsPFS = _SimulationData.DynamicsPFS;
                     double kinematicsPFS = _SimulationData.KinematicsPFS;
                     if (!_SimulationData.CacheIsFull)
@@ -770,6 +788,8 @@ namespace Multibody
                     {
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
+                        int lowRadius = Math.Min(bitmap.Width, bitmap.Height) / 2;
+                        int highRadius = Math.Max(lowRadius * 2, Math.Max(bitmap.Width, bitmap.Height) / 2);
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = _SimulationData.GetParticle(i);
@@ -778,9 +798,25 @@ namespace Multibody
                             {
                                 float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
 
-                                if (Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
+                                if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
                                 {
-                                    grap.FillEllipse(particle.Brush, new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2));
+                                    RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
+                                    if (radius <= lowRadius)
+                                    {
+                                        grap.FillEllipse(particle.Brush, ellipse);
+                                    }
+                                    else
+                                    {
+                                        int alpha = (int)Math.Round(255 * (highRadius - radius) / (highRadius - lowRadius));
+                                        if (alpha >= 1)
+                                        {
+                                            Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
+                                            using (SolidBrush br = new SolidBrush(cr))
+                                            {
+                                                grap.FillEllipse(br, ellipse);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

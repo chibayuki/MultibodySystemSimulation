@@ -57,13 +57,15 @@ namespace Multibody
 
             if (!_SimulationData.CacheIsFull)
             {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                int num = Math.Max(1, (int)Math.Ceiling(_SimulationData.TimeMag * 0.03 / _SimulationData.KinematicsResolution));
+                // 此Simulator线程与Renderer竞争读写锁，需要尽可能缩短当前线程占用写入锁的时长以避免降低刷新率；
+                // 另一方面，仿真计算的速度应该尽可能总是快于渲染速度，否则也会降低刷新率。
+                // 例如，下列代码期待：仿真计算每次持续不超过5毫秒，并且将多体系统的运行时间推进对应于至多0.1秒现实时长。
+                Stopwatch sw = Stopwatch.StartNew();
+                int num = Math.Max(1, (int)Math.Ceiling(_SimulationData.TimeMag * 0.1 / _SimulationData.KinematicsResolution));
                 for (int i = 0; i < num; i++)
                 {
                     _SimulationData.NextMoment();
-                    if (sw.ElapsedMilliseconds >= 15 || _SimulationData.CacheIsFull)
+                    if (_SimulationData.CacheIsFull || sw.ElapsedMilliseconds >= 5)
                     {
                         break;
                     }
