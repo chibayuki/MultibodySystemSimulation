@@ -623,12 +623,20 @@ namespace Multibody
                                 {
                                     transformCachedNum++;
                                 }
+                                else
+                                {
+                                    transformNum++;
+                                }
 
                                 Particle particle2 = snapshot.GetFrame(k).GetParticle(i);
                                 transformRequestNum++;
                                 if (_GetOrCacheTransformResult(particle2, out PointD pt2, out _))
                                 {
                                     transformCachedNum++;
+                                }
+                                else
+                                {
+                                    transformNum++;
                                 }
 
                                 while (true)
@@ -653,6 +661,10 @@ namespace Multibody
                                         {
                                             transformCachedNum++;
                                         }
+                                        else
+                                        {
+                                            transformNum++;
+                                        }
                                     }
                                     else
                                     {
@@ -671,6 +683,10 @@ namespace Multibody
                             if (_GetOrCacheTransformResult(particle, out PointD pt, out double z))
                             {
                                 transformCachedNum++;
+                            }
+                            else
+                            {
+                                transformNum++;
                             }
 
                             float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
