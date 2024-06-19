@@ -361,6 +361,25 @@ namespace Multibody
             }
         }
 
+        private bool _GetOrCacheTransformResult(Particle particle, out PointD scrPt, out double z)
+        {
+            TransformResultCache cache = particle.TransformResultCache;
+            if (cache.TransformID == _ViewParamChangedCount)
+            {
+                scrPt = cache.ScreenLocation;
+                z = cache.DistanceToScreen;
+                return true;
+            }
+            else
+            {
+                _WorldToScreen(particle.Location, out scrPt, out z);
+                cache.ScreenLocation = scrPt;
+                cache.DistanceToScreen = z;
+                cache.TransformID = _ViewParamChangedCount;
+                return false;
+            }
+        }
+
         #endregion
 
         #region 渲染
@@ -599,38 +618,18 @@ namespace Multibody
                                 int j = frameCount - 1, k = frameCount - 2;
 
                                 Particle particle1 = snapshot.GetFrame(j).GetParticle(i);
-                                TransformResultCache cache1 = particle1.TransformResultCache;
                                 transformRequestNum++;
-                                if (cache1.TransformID != _ViewParamChangedCount)
-                                {
-                                    _WorldToScreen(particle1.Location, out PointD pt, out double z);
-                                    cache1.ScreenLocation = pt;
-                                    cache1.DistanceToScreen = z;
-                                    cache1.TransformID = _ViewParamChangedCount;
-                                    transformNum++;
-                                }
-                                else
+                                if (_GetOrCacheTransformResult(particle1, out PointD pt1, out _))
                                 {
                                     transformCachedNum++;
                                 }
-                                PointD pt1 = cache1.ScreenLocation;
 
                                 Particle particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                TransformResultCache cache2 = particle2.TransformResultCache;
                                 transformRequestNum++;
-                                if (cache2.TransformID != _ViewParamChangedCount)
-                                {
-                                    _WorldToScreen(particle2.Location, out PointD pt, out double z);
-                                    cache2.ScreenLocation = pt;
-                                    cache2.DistanceToScreen = z;
-                                    cache2.TransformID = _ViewParamChangedCount;
-                                    transformNum++;
-                                }
-                                else
+                                if (_GetOrCacheTransformResult(particle2, out PointD pt2, out _))
                                 {
                                     transformCachedNum++;
                                 }
-                                PointD pt2 = cache2.ScreenLocation;
 
                                 while (true)
                                 {
@@ -649,21 +648,11 @@ namespace Multibody
                                     {
                                         k--;
                                         particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                        cache2 = particle2.TransformResultCache;
                                         transformRequestNum++;
-                                        if (cache2.TransformID != _ViewParamChangedCount)
-                                        {
-                                            _WorldToScreen(particle2.Location, out PointD pt, out double z);
-                                            cache2.ScreenLocation = pt;
-                                            cache2.DistanceToScreen = z;
-                                            cache2.TransformID = _ViewParamChangedCount;
-                                            transformNum++;
-                                        }
-                                        else
+                                        if (_GetOrCacheTransformResult(particle2, out pt2, out _))
                                         {
                                             transformCachedNum++;
                                         }
-                                        pt2 = cache2.ScreenLocation;
                                     }
                                     else
                                     {
@@ -678,30 +667,17 @@ namespace Multibody
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = latestFrame.GetParticle(i);
-
-                            TransformResultCache cache = particle.TransformResultCache;
                             transformRequestNum++;
-                            if (cache.TransformID != _ViewParamChangedCount)
-                            {
-                                _WorldToScreen(particle.Location, out PointD pt, out double z);
-                                cache.ScreenLocation = pt;
-                                cache.DistanceToScreen = z;
-                                cache.TransformID = _ViewParamChangedCount;
-                                transformNum++;
-                            }
-                            else
+                            if (_GetOrCacheTransformResult(particle, out PointD pt, out double z))
                             {
                                 transformCachedNum++;
                             }
 
-                            PointD location = cache.ScreenLocation;
-                            double distance = cache.DistanceToScreen;
+                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
 
-                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / distance));
-
-                            if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(location, radius, bitmapBounds))
+                            if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
                             {
-                                RectangleF ellipse = new RectangleF((float)location.X - radius, (float)location.Y - radius, radius * 2, radius * 2);
+                                RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
                                 if (radius <= lowRadius)
                                 {
                                     grap.FillEllipse(particle.Brush, ellipse);
@@ -739,43 +715,43 @@ namespace Multibody
                     {
                         if (dynamicsPFS < _TimeMag / _SimulationData.DynamicsResolution * 0.9)
                         {
-                            sb.Append($"    动力学方程(D): {dynamicsPFS:N1} Hz  [性能不佳]\n");
+                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz  [性能不佳]\n");
                         }
                         else
                         {
-                            sb.Append($"    动力学方程(D): {dynamicsPFS:N1} Hz\n");
+                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
                         }
 
                         if (kinematicsPFS < _TimeMag / _SimulationData.KinematicsResolution * 0.9)
                         {
-                            sb.Append($"    轨迹(K): {kinematicsPFS:N1} Hz  [性能不佳]\n");
+                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz  [性能不佳]\n");
                         }
                         else
                         {
-                            sb.Append($"    轨迹(K): {kinematicsPFS:N1} Hz\n");
+                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
                         }
                     }
                     else
                     {
-                        sb.Append($"    动力学方程(D): {dynamicsPFS:N1} Hz\n");
-                        sb.Append($"    轨迹(K): {kinematicsPFS:N1} Hz\n");
+                        sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
+                        sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
                     }
-                    sb.Append($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz (缓存命中率: {(transformRequestNum <= 0 ? 0 : 100.0 * transformCachedNum / transformRequestNum):N1}%)\n");
-                    sb.Append($"    直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"   -  使用中/已缓存: {snapshot?.FrameCount ?? 0}/{_SimulationData.CachedFrameCount} 帧\n");
+                    sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"   -  命中/已缓存: {transformCachedNum}/{transformRequestNum} 个结果\n");
+                    sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
                     double fps = _FrameRateCounter.Frequency;
                     if (fps < 10)
                     {
-                        sb.Append($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS  [性能不佳]\n\n");
+                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS  [性能不佳]\n\n");
                     }
                     else
                     {
-                        sb.Append($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
                     }
-                    sb.Append($"已缓存(K): {_SimulationData.CachedFrameCount} 帧\n");
-                    sb.Append($"使用中(K): {snapshot?.FrameCount ?? 0} 帧\n");
-                    sb.Append($"最新帧: D {_SimulationData.LatestFrame.DynamicsId}, K {_SimulationData.LatestFrame.KinematicsId}\n");
-                    sb.Append($"当前帧: D {latestFrameDynamicsId}, K {latestFrameKinematicsId}, G {_GenerateCount}\n\n");
-                    sb.Append($"时间:   {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(time))}");
+                    sb.Append($"最新帧: (D) {_SimulationData.LatestFrame.DynamicsId}, (K) {_SimulationData.LatestFrame.KinematicsId}\n");
+                    sb.Append($"当前帧: (D) {latestFrameDynamicsId}, (K) {latestFrameKinematicsId}, (G) {_GenerateCount}\n\n");
+                    sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(time))}");
                     grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 215));
 
                     _GenerateCount++;
@@ -825,9 +801,9 @@ namespace Multibody
                     }
 
                     StringBuilder sb = new StringBuilder();
-                    sb.Append("频率:\n");
-                    sb.Append($"    仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
-                    sb.Append($"    刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                    sb.Append("性能:\n");
+                    sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                    sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
                     grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
                 }
 
