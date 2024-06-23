@@ -166,7 +166,7 @@ namespace Multibody
 #if DrawImageOnCaptionBar
         private Size _ViewSize => FormManager.Size;
 #else
-        private Size _ViewSize => FormManager.ClientSize;
+        private Size _ViewSize => PictureBox_View.Size;
 #endif
 
         //

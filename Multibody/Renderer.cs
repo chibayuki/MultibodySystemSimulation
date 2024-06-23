@@ -451,10 +451,10 @@ namespace Multibody
 
                 _GridBitmap = new Bitmap(Math.Max(1, bitmapWidth), Math.Max(1, bitmapHeight));
 
-                using (Graphics grap = Graphics.FromImage(_GridBitmap))
+                using (Graphics graph = Graphics.FromImage(_GridBitmap))
                 {
-                    grap.SmoothingMode = SmoothingMode.AntiAlias;
-                    grap.Clear(_RedrawControl.BackColor);
+                    graph.SmoothingMode = SmoothingMode.AntiAlias;
+                    graph.Clear(_RedrawControl.BackColor);
 
                     double gridDepth = 5000; // 绘制坐标系网格的最远距离（像素）
                     PointD3D[] pts;
@@ -530,7 +530,7 @@ namespace Multibody
                                         if (alpha >= 1)
                                         {
                                             Color cr = Color.FromArgb(Math.Min(255, alpha), 64, 64, 64);
-                                            if (Painting2D.PaintLine(_GridBitmap, scrPt1, scrPt2, cr, 1, true))
+                                            if (Painting2D.PaintLine(graph, _GridBitmap.Size, scrPt1, scrPt2, cr, 1))
                                             {
                                                 lineNum++;
                                             }
@@ -583,9 +583,9 @@ namespace Multibody
 
             Bitmap bitmap = (Bitmap)_GridBitmap.Clone();
 
-            using (Graphics grap = Graphics.FromImage(bitmap))
+            using (Graphics graph = Graphics.FromImage(bitmap))
             {
-                grap.SmoothingMode = SmoothingMode.AntiAlias;
+                graph.SmoothingMode = SmoothingMode.AntiAlias;
 
                 if (_SimulationIsRunning)
                 {
@@ -644,7 +644,7 @@ namespace Multibody
                                     if (pt1.DistanceFrom(pt2) >= MinLineLength || k == 0)
                                     {
                                         int alpha = (int)Math.Round(255.0 * j / frameCount);
-                                        if (alpha >= 1 && Painting2D.PaintLine(bitmap, pt1, pt2, Color.FromArgb(Math.Min(255, alpha), latestFrame.GetParticle(i).Color), 1, true))
+                                        if (alpha >= 1 && Painting2D.PaintLine(graph, bitmap.Size, pt1, pt2, Color.FromArgb(Math.Min(255, alpha), latestFrame.GetParticle(i).Color), 1))
                                         {
                                             lineNum++;
                                         }
@@ -696,7 +696,7 @@ namespace Multibody
                                 RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
                                 if (radius <= lowRadius)
                                 {
-                                    grap.FillEllipse(particle.Brush, ellipse);
+                                    graph.FillEllipse(particle.Brush, ellipse);
                                 }
                                 else
                                 {
@@ -706,7 +706,7 @@ namespace Multibody
                                         Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
                                         using (SolidBrush br = new SolidBrush(cr))
                                         {
-                                            grap.FillEllipse(br, ellipse);
+                                            graph.FillEllipse(br, ellipse);
                                         }
                                     }
                                 }
@@ -768,7 +768,7 @@ namespace Multibody
                     sb.Append($"最新帧: (D) {_SimulationData.LatestFrame.DynamicsId}, (K) {_SimulationData.LatestFrame.KinematicsId}\n");
                     sb.Append($"当前帧: (D) {latestFrameDynamicsId}, (K) {latestFrameKinematicsId}, (G) {_GenerateCount}\n\n");
                     sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(time))}");
-                    grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 215));
+                    graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 215));
 
                     _GenerateCount++;
                 }
@@ -795,7 +795,7 @@ namespace Multibody
                                     RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
                                     if (radius <= lowRadius)
                                     {
-                                        grap.FillEllipse(particle.Brush, ellipse);
+                                        graph.FillEllipse(particle.Brush, ellipse);
                                     }
                                     else
                                     {
@@ -805,7 +805,7 @@ namespace Multibody
                                             Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
                                             using (SolidBrush br = new SolidBrush(cr))
                                             {
-                                                grap.FillEllipse(br, ellipse);
+                                                graph.FillEllipse(br, ellipse);
                                             }
                                         }
                                     }
@@ -820,7 +820,7 @@ namespace Multibody
                     sb.Append("性能:\n");
                     sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
                     sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
-                    grap.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
+                    graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
                 }
 
                 bool pressedKeysAreLegal = false;
@@ -854,12 +854,12 @@ namespace Multibody
                     bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
                     Font font = pressed ? _PressedKeyFont : _UnpressedKeyFont;
                     font = Texting.GetSuitableFont(str, font, rect.Size);
-                    SizeF size = grap.MeasureString(str, font);
+                    SizeF size = graph.MeasureString(str, font);
                     PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
                     Pen pen = pressed ? _PressedKeyPen : _UnpressedKeyPen;
                     Brush br = pressed ? _PressedKeyBrush : _UnpressedKeyBrush;
-                    grap.DrawRectangle(pen, rect);
-                    grap.DrawString(str, font, br, loc);
+                    graph.DrawRectangle(pen, rect);
+                    graph.DrawString(str, font, br, loc);
                 };
                 DrawKey(rectR, Keys.R, "R");
                 DrawKey(rectX, Keys.X, "X");
