@@ -27,7 +27,7 @@ using PointD = Com.PointD;
 using PointD3D = Com.PointD3D;
 using Real = Com.Real;
 using Texting = Com.Text;
-using VectorType = Com.Vector.Type;
+using VectorType = Com.VectorType;
 using UIMessage = Com.WinForm.UIMessage;
 using UIMessageProcessor = Com.WinForm.UIMessageProcessor;
 
@@ -121,7 +121,7 @@ namespace Multibody
                 //
 
                 case (int)MessageCode.PressedKeysChanged:
-                    _PressedKeys = new HashSet<Keys>((Keys[])message.RequestData);
+                    _UpdatePressedKeys((Keys[])message.RequestData);
                     break;
 
                 //
@@ -157,7 +157,7 @@ namespace Multibody
         private void _SimulationStart()
         {
             _SimulationStartTime = DateTime.UtcNow;
-            _GenerateCount = 0;
+            _RenderCount = 0;
 
             //
 
@@ -196,6 +196,7 @@ namespace Multibody
             _ViewParamChangedCount = Math.Max(0, _ViewParamChangedCount + 1);
 
             _DisposeGridBitmap();
+            _DisposeBackgroundBitmap();
         }
 
         private void _SetSpaceMag(double spaceMag)
@@ -208,6 +209,7 @@ namespace Multibody
             _UpdateGridDistance();
 
             _DisposeGridBitmap();
+            _DisposeBackgroundBitmap();
         }
 
         //
@@ -263,6 +265,7 @@ namespace Multibody
                 _ViewParamChangedCount = Math.Max(0, _ViewParamChangedCount + 1);
 
                 _DisposeGridBitmap();
+                _DisposeBackgroundBitmap();
             }
         }
 
@@ -278,6 +281,7 @@ namespace Multibody
             _ViewParamChangedCount = Math.Max(0, _ViewParamChangedCount + 1);
 
             _DisposeGridBitmap();
+            _DisposeBackgroundBitmap();
         }
 
         // 将世界坐标系坐标转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
@@ -361,6 +365,7 @@ namespace Multibody
             }
         }
 
+        // 获取或缓存粒子的仿射变换结果。
         private bool _GetOrCacheTransformResult(Particle particle, out PointD scrPt, out double z)
         {
             TransformResultCache cache = particle.TransformResultCache;
@@ -392,6 +397,27 @@ namespace Multibody
             _TimeMag = timeMag;
             _SimulationData.TimeMag = timeMag;
         }
+
+        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
+
+        // 更新按键。
+        private void _UpdatePressedKeys(Keys[] keys)
+        {
+            _PressedKeys = new HashSet<Keys>(keys);
+
+            _DisposeBackgroundBitmap();
+        }
+
+        private DateTime _SimulationStartTime = DateTime.MinValue; // 仿真开始的日期时间。
+        private long _RenderCount = 0; // 自仿真开始以来的累计渲染次数。
+
+        private double _CurrentTime = 0; // 多体系统的当前时间。
+        private int _UsingFrameCount = 0; // 使用中的多体系统快照帧数。
+        private long _LatestFrameDynamicsId = -1; // 最新的动力学帧ID。
+        private long _LatestFrameKinematicsId = -1; // 最新的运动学帧ID。
+
+        private int _TransformRequestNum = 0; // 仿射变换请求次数。
+        private int _TransformCachedNum = 0; // 仿射变换缓存命中次数。
 
         //
 
@@ -436,8 +462,8 @@ namespace Multibody
             }
         }
 
-        // 生成坐标系网格位图。
-        private void _GenerateGridBitmap()
+        // 获取或生成坐标系网格位图。
+        private Bitmap _GetOrCreateGridBitmap()
         {
             // 坐标系网格在视图内的可见部分，在世界坐标系中是一个顶点位于视图中心（或者，当不考虑绘图偏移时为原点）、高度无限大的四棱锥，
             // 其任一横截面与视图矩形相似，棱的斜率与投影变换的焦距成反比；考虑该四棱锥从顶点起、高度有限大的部分，
@@ -560,15 +586,29 @@ namespace Multibody
                     }
                 }
             }
+
+            return _GridBitmap;
         }
 
-        private DateTime _SimulationStartTime = DateTime.MinValue; // 仿真开始的日期时间。
-        private long _GenerateCount = 0; // 自仿真开始以来的累计渲染次数。
+        //
+
+        private Bitmap _BackgroundBitmap = null; // 背景（坐标系网格+提示信息）位图。
+
+        private DateTime _LastCreateBackgroundBitmapTime = DateTime.MinValue;
+
+        // 删除背景位图。
+        private void _DisposeBackgroundBitmap()
+        {
+            if (_BackgroundBitmap != null)
+            {
+                _BackgroundBitmap.Dispose();
+                _BackgroundBitmap = null;
+            }
+        }
 
         private static Font _FPSInfoFont = new Font("微软雅黑", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
         private static Brush _FPSInfoBrush = new SolidBrush(Color.Gray);
 
-        private HashSet<Keys> _PressedKeys = new HashSet<Keys>(); // 键盘正在按下的按键。
         private static Font _UnpressedKeyFont = new Font("微软雅黑", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
         private static Font _PressedKeyFont = new Font("微软雅黑", 12F, FontStyle.Bold, GraphicsUnit.Point, 134);
         private static Brush _UnpressedKeyBrush = new SolidBrush(Color.Gray);
@@ -576,12 +616,136 @@ namespace Multibody
         private static Pen _UnpressedKeyPen = new Pen(Color.Gray, 1);
         private static Pen _PressedKeyPen = new Pen(Color.Silver, 2);
 
-        // 返回将多体系统的当前状态渲染得到的位图。
-        private Bitmap _GenerateBitmap()
+        // 获取或生成背景位图。
+        private Bitmap _GetOrCreateBackgroundBitmap()
         {
-            _GenerateGridBitmap();
+            if (_BackgroundBitmap != null && (DateTime.UtcNow - _LastCreateBackgroundBitmapTime).TotalMilliseconds >= 100)
+            {
+                _DisposeBackgroundBitmap();
+            }
 
-            Bitmap bitmap = (Bitmap)_GridBitmap.Clone();
+            if (_BackgroundBitmap is null)
+            {
+                _BackgroundBitmap = (Bitmap)_GetOrCreateGridBitmap().Clone();
+
+                using (Graphics graph = Graphics.FromImage(_BackgroundBitmap))
+                {
+                    graph.SmoothingMode = SmoothingMode.AntiAlias;
+
+                    if (_SimulationIsRunning)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("性能:\n");
+                        double dynamicsPFS = _SimulationData.DynamicsPFS;
+                        double kinematicsPFS = _SimulationData.KinematicsPFS;
+                        if (!_SimulationData.CacheIsFull)
+                        {
+                            if (dynamicsPFS < _TimeMag / _SimulationData.DynamicsResolution * 0.9)
+                            {
+                                sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz  [性能不佳]\n");
+                            }
+                            else
+                            {
+                                sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
+                            }
+
+                            if (kinematicsPFS < _TimeMag / _SimulationData.KinematicsResolution * 0.9)
+                            {
+                                sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz  [性能不佳]\n");
+                            }
+                            else
+                            {
+                                sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
+                            }
+                        }
+                        else
+                        {
+                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
+                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
+                        }
+                        sb.Append($"   -  使用中/已缓存: {_UsingFrameCount}/{_SimulationData.CachedFrameCount} 帧\n");
+                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                        sb.Append($"   -  命中缓存/已提交: {_TransformCachedNum}/{_TransformRequestNum} 次\n");
+                        sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
+                        double fps = _FrameRateCounter.Frequency;
+                        if (fps < 10)
+                        {
+                            sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS  [性能不佳]\n\n");
+                        }
+                        else
+                        {
+                            sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                        }
+                        sb.Append($"最新帧: (D) {_SimulationData.LatestFrame.DynamicsId}, (K) {_SimulationData.LatestFrame.KinematicsId}\n");
+                        sb.Append($"当前帧: (D) {_LatestFrameDynamicsId}, (K) {_LatestFrameKinematicsId}, (G) {_RenderCount}\n\n");
+                        sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_CurrentTime))}");
+                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 215));
+                    }
+                    else
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("性能:\n");
+                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
+                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 55));
+                    }
+
+                    bool pressedKeysAreLegal = false;
+                    if (_PressedKeys.Count == 1)
+                    {
+                        if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
+                        {
+                            pressedKeysAreLegal = true;
+                        }
+                    }
+                    else if (_PressedKeys.Count == 2)
+                    {
+                        if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
+                        {
+                            pressedKeysAreLegal = true;
+                        }
+                        else if (_PressedKeys.Contains(Keys.R))
+                        {
+                            if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
+                            {
+                                pressedKeysAreLegal = true;
+                            }
+                        }
+                    }
+                    Rectangle rectR = new Rectangle(10, 10, 30, 30);
+                    Rectangle rectX = new Rectangle(50, 10, 30, 30);
+                    Rectangle rectY = new Rectangle(90, 10, 30, 30);
+                    Rectangle rectZ = new Rectangle(130, 10, 30, 30);
+                    Action<Rectangle, Keys, string> DrawKey = (rect, key, str) =>
+                    {
+                        bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
+                        Font font = pressed ? _PressedKeyFont : _UnpressedKeyFont;
+                        font = Texting.GetSuitableFont(str, font, rect.Size);
+                        SizeF size = graph.MeasureString(str, font);
+                        PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
+                        Pen pen = pressed ? _PressedKeyPen : _UnpressedKeyPen;
+                        Brush br = pressed ? _PressedKeyBrush : _UnpressedKeyBrush;
+                        graph.DrawRectangle(pen, rect);
+                        graph.DrawString(str, font, br, loc);
+                    };
+                    DrawKey(rectR, Keys.R, "R");
+                    DrawKey(rectX, Keys.X, "X");
+                    DrawKey(rectY, Keys.Y, "Y");
+                    DrawKey(rectZ, Keys.Z, "Z");
+                }
+
+                _LastCreateBackgroundBitmapTime = DateTime.UtcNow;
+            }
+
+            return _BackgroundBitmap;
+        }
+
+        //
+
+        // 返回将多体系统的当前状态渲染得到的位图。
+        private Bitmap _CreateBitmap()
+        {
+            Bitmap bitmap = (Bitmap)_GetOrCreateBackgroundBitmap().Clone();
 
             using (Graphics graph = Graphics.FromImage(bitmap))
             {
@@ -589,20 +753,21 @@ namespace Multibody
 
                 if (_SimulationIsRunning)
                 {
-                    double time = Math.Min(_SimulationData.LatestFrame.Time, (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag);
-                    Snapshot snapshot = _SimulationData.GetSnapshot(time - _SimulationData.TrackLength, time);
+                    _CurrentTime = Math.Min(_SimulationData.LatestFrame.Time, (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag);
+                    Snapshot snapshot = _SimulationData.GetSnapshot(_CurrentTime - _SimulationData.TrackLength, _CurrentTime);
 
-                    int transformRequestNum = 0;
-                    int transformCachedNum = 0;
+                    _TransformRequestNum = 0;
+                    _TransformCachedNum = 0;
 
-                    long latestFrameDynamicsId = -1, latestFrameKinematicsId = -1;
-                    if (snapshot != null && snapshot.FrameCount > 0)
+                    _LatestFrameDynamicsId = -1;
+                    _LatestFrameKinematicsId = -1;
+
+                    _UsingFrameCount = snapshot.FrameCount;
+                    if (snapshot != null && _UsingFrameCount > 0)
                     {
-                        int frameCount = snapshot.FrameCount;
-
                         Frame latestFrame = snapshot.LatestFrame;
-                        latestFrameDynamicsId = latestFrame.DynamicsId;
-                        latestFrameKinematicsId = latestFrame.KinematicsId;
+                        _LatestFrameDynamicsId = latestFrame.DynamicsId;
+                        _LatestFrameKinematicsId = latestFrame.KinematicsId;
                         int particleCount = latestFrame.ParticleCount;
 
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
@@ -610,18 +775,18 @@ namespace Multibody
                         int transformNum = 0;
                         int lineNum = 0;
 
-                        if (frameCount > 1)
+                        if (_UsingFrameCount > 1)
                         {
                             const double MinLineLength = 3;
                             for (int i = 0; i < particleCount; i++)
                             {
-                                int j = frameCount - 1, k = frameCount - 2;
+                                int j = _UsingFrameCount - 1, k = _UsingFrameCount - 2;
 
                                 Particle particle1 = snapshot.GetFrame(j).GetParticle(i);
-                                transformRequestNum++;
+                                _TransformRequestNum++;
                                 if (_GetOrCacheTransformResult(particle1, out PointD pt1, out _))
                                 {
-                                    transformCachedNum++;
+                                    _TransformCachedNum++;
                                 }
                                 else
                                 {
@@ -629,10 +794,10 @@ namespace Multibody
                                 }
 
                                 Particle particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                transformRequestNum++;
+                                _TransformRequestNum++;
                                 if (_GetOrCacheTransformResult(particle2, out PointD pt2, out _))
                                 {
-                                    transformCachedNum++;
+                                    _TransformCachedNum++;
                                 }
                                 else
                                 {
@@ -643,7 +808,7 @@ namespace Multibody
                                 {
                                     if (pt1.DistanceFrom(pt2) >= MinLineLength || k == 0)
                                     {
-                                        int alpha = (int)Math.Round(255.0 * j / frameCount);
+                                        int alpha = (int)Math.Round(255.0 * j / _UsingFrameCount);
                                         if (alpha >= 1 && Painting2D.PaintLine(graph, bitmap.Size, pt1, pt2, Color.FromArgb(Math.Min(255, alpha), latestFrame.GetParticle(i).Color), 1))
                                         {
                                             lineNum++;
@@ -656,10 +821,10 @@ namespace Multibody
                                     {
                                         k--;
                                         particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                        transformRequestNum++;
+                                        _TransformRequestNum++;
                                         if (_GetOrCacheTransformResult(particle2, out pt2, out _))
                                         {
-                                            transformCachedNum++;
+                                            _TransformCachedNum++;
                                         }
                                         else
                                         {
@@ -679,10 +844,10 @@ namespace Multibody
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = latestFrame.GetParticle(i);
-                            transformRequestNum++;
+                            _TransformRequestNum++;
                             if (_GetOrCacheTransformResult(particle, out PointD pt, out double z))
                             {
-                                transformCachedNum++;
+                                _TransformCachedNum++;
                             }
                             else
                             {
@@ -723,54 +888,7 @@ namespace Multibody
                         }
                     }
 
-                    StringBuilder sb = new StringBuilder();
-                    sb.Append("性能:\n");
-                    double dynamicsPFS = _SimulationData.DynamicsPFS;
-                    double kinematicsPFS = _SimulationData.KinematicsPFS;
-                    if (!_SimulationData.CacheIsFull)
-                    {
-                        if (dynamicsPFS < _TimeMag / _SimulationData.DynamicsResolution * 0.9)
-                        {
-                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz  [性能不佳]\n");
-                        }
-                        else
-                        {
-                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
-                        }
-
-                        if (kinematicsPFS < _TimeMag / _SimulationData.KinematicsResolution * 0.9)
-                        {
-                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz  [性能不佳]\n");
-                        }
-                        else
-                        {
-                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
-                        }
-                    }
-                    else
-                    {
-                        sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
-                        sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
-                    }
-                    sb.Append($"   -  使用中/已缓存: {snapshot?.FrameCount ?? 0}/{_SimulationData.CachedFrameCount} 帧\n");
-                    sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
-                    sb.Append($"   -  命中/已缓存: {transformCachedNum}/{transformRequestNum} 个结果\n");
-                    sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
-                    double fps = _FrameRateCounter.Frequency;
-                    if (fps < 10)
-                    {
-                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS  [性能不佳]\n\n");
-                    }
-                    else
-                    {
-                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
-                    }
-                    sb.Append($"最新帧: (D) {_SimulationData.LatestFrame.DynamicsId}, (K) {_SimulationData.LatestFrame.KinematicsId}\n");
-                    sb.Append($"当前帧: (D) {latestFrameDynamicsId}, (K) {latestFrameKinematicsId}, (G) {_GenerateCount}\n\n");
-                    sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(time))}");
-                    graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 215));
-
-                    _GenerateCount++;
+                    _RenderCount++;
                 }
                 else
                 {
@@ -822,49 +940,6 @@ namespace Multibody
                     sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
                     graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
                 }
-
-                bool pressedKeysAreLegal = false;
-                if (_PressedKeys.Count == 1)
-                {
-                    if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
-                    {
-                        pressedKeysAreLegal = true;
-                    }
-                }
-                else if (_PressedKeys.Count == 2)
-                {
-                    if (_PressedKeys.Contains(Keys.X) && _PressedKeys.Contains(Keys.Y))
-                    {
-                        pressedKeysAreLegal = true;
-                    }
-                    else if (_PressedKeys.Contains(Keys.R))
-                    {
-                        if (_PressedKeys.Contains(Keys.X) || _PressedKeys.Contains(Keys.Y) || _PressedKeys.Contains(Keys.Z))
-                        {
-                            pressedKeysAreLegal = true;
-                        }
-                    }
-                }
-                Rectangle rectR = new Rectangle(10, 10, 30, 30);
-                Rectangle rectX = new Rectangle(50, 10, 30, 30);
-                Rectangle rectY = new Rectangle(90, 10, 30, 30);
-                Rectangle rectZ = new Rectangle(130, 10, 30, 30);
-                Action<Rectangle, Keys, string> DrawKey = (rect, key, str) =>
-                {
-                    bool pressed = pressedKeysAreLegal && _PressedKeys.Contains(key);
-                    Font font = pressed ? _PressedKeyFont : _UnpressedKeyFont;
-                    font = Texting.GetSuitableFont(str, font, rect.Size);
-                    SizeF size = graph.MeasureString(str, font);
-                    PointF loc = new PointF(rect.X + (rect.Width - size.Width) / 2, rect.Y + (rect.Height - size.Height) / 2);
-                    Pen pen = pressed ? _PressedKeyPen : _UnpressedKeyPen;
-                    Brush br = pressed ? _PressedKeyBrush : _UnpressedKeyBrush;
-                    graph.DrawRectangle(pen, rect);
-                    graph.DrawString(str, font, br, loc);
-                };
-                DrawKey(rectR, Keys.R, "R");
-                DrawKey(rectX, Keys.X, "X");
-                DrawKey(rectY, Keys.Y, "Y");
-                DrawKey(rectZ, Keys.Z, "Z");
             }
 
             return bitmap;
@@ -882,7 +957,7 @@ namespace Multibody
         // 重绘。
         private void _RedrawBitmap()
         {
-            _RedrawControl.Invoke(_RedrawMethod, _GenerateBitmap());
+            _RedrawControl.Invoke(_RedrawMethod, _CreateBitmap());
 
             _FrameRateCounter.Update();
         }

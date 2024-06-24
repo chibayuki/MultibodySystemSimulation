@@ -197,15 +197,19 @@ namespace Multibody
         {
             if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z)
             {
-                _PressedKeys.Add(e.KeyCode);
-                _InteractiveManager.PressedKeysChanged(_PressedKeys);
+                if (_PressedKeys.Add(e.KeyCode))
+                {
+                    _InteractiveManager.PressedKeysChanged(_PressedKeys);
+                }
             }
         }
 
         private void PictureBox_View_KeyUp(object sender, KeyEventArgs e)
         {
-            _PressedKeys.Remove(e.KeyCode);
-            _InteractiveManager.PressedKeysChanged(_PressedKeys);
+            if (_PressedKeys.Remove(e.KeyCode))
+            {
+                _InteractiveManager.PressedKeysChanged(_PressedKeys);
+            }
         }
 
         private void PictureBox_View_MouseDown(object sender, MouseEventArgs e)
