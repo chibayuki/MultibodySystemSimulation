@@ -157,7 +157,6 @@ namespace Multibody
         private void _SimulationStart()
         {
             _SimulationStartTime = DateTime.UtcNow;
-            _RenderCount = 0;
 
             //
 
@@ -177,8 +176,6 @@ namespace Multibody
         private AffineTransformation _AffineTransformation = AffineTransformation.Empty; // 当前使用的仿射变换。
         private AffineTransformation _AffineTransformationCopy = null; // 视图控制开始前使用的仿射变换的副本。
         private AffineTransformation _InverseAffineTransformation = AffineTransformation.Empty; // 当前使用的仿射变换的逆变换。
-
-        private FrequencyCounter _TransformFrequencyCounter = new FrequencyCounter(); // 仿射变换的频率计数器。
 
         private long _ViewParamChangedCount = 0; // 视图参数改变的次数。
 
@@ -283,6 +280,8 @@ namespace Multibody
             _DisposeGridBitmap();
             _DisposeBackgroundBitmap();
         }
+
+        //
 
         // 将世界坐标系坐标转换到屏幕坐标系（并将原点平移至视图中心），输出世界坐标系中的坐标到屏幕的距离。
         private bool _WorldToScreen(PointD3D pt, out PointD scrPt, out double z)
@@ -409,15 +408,15 @@ namespace Multibody
         }
 
         private DateTime _SimulationStartTime = DateTime.MinValue; // 仿真开始的日期时间。
-        private long _RenderCount = 0; // 自仿真开始以来的累计渲染次数。
 
         private double _CurrentTime = 0; // 多体系统的当前时间。
         private int _UsingFrameCount = 0; // 使用中的多体系统快照帧数。
         private long _LatestFrameDynamicsId = -1; // 最新的动力学帧ID。
         private long _LatestFrameKinematicsId = -1; // 最新的运动学帧ID。
 
-        private int _TransformRequestNum = 0; // 仿射变换请求次数。
-        private int _TransformCachedNum = 0; // 仿射变换缓存命中次数。
+        private FrequencyCounter _TransformFrequencyCounter = new FrequencyCounter(); // 仿射变换的频率计数器。
+        private FrequencyCounter _TransformRequestFrequencyCounter = new FrequencyCounter(); // 仿射变换提交请求的频率计数器。
+        private FrequencyCounter _TransformCachedFrequencyCounter = new FrequencyCounter(); // 仿射变换命中缓存的频率计数器。
 
         //
 
@@ -635,58 +634,31 @@ namespace Multibody
                     if (_SimulationIsRunning)
                     {
                         StringBuilder sb = new StringBuilder();
+                        Frame latestFrame = _SimulationData.LatestFrame;
                         sb.Append("性能:\n");
-                        double dynamicsPFS = _SimulationData.DynamicsPFS;
-                        double kinematicsPFS = _SimulationData.KinematicsPFS;
-                        if (!_SimulationData.CacheIsFull)
-                        {
-                            if (dynamicsPFS < _TimeMag / _SimulationData.DynamicsResolution * 0.9)
-                            {
-                                sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz  [性能不佳]\n");
-                            }
-                            else
-                            {
-                                sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
-                            }
-
-                            if (kinematicsPFS < _TimeMag / _SimulationData.KinematicsResolution * 0.9)
-                            {
-                                sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz  [性能不佳]\n");
-                            }
-                            else
-                            {
-                                sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
-                            }
-                        }
-                        else
-                        {
-                            sb.Append($"   动力学方程(D): {dynamicsPFS:N1} Hz\n");
-                            sb.Append($"   轨迹(K): {kinematicsPFS:N1} Hz\n");
-                        }
+                        sb.Append($"   动力学方程:\n");
+                        sb.Append($"   -  目标频率: {_TimeMag / _SimulationData.DynamicsResolution:N0} Hz\n");
+                        sb.Append($"   -  频率: {_SimulationData.DynamicsPFS:N0} Hz\n");
+                        sb.Append($"   -  当前帧/最新帧: {_LatestFrameDynamicsId}/{latestFrame?.DynamicsId ?? 0}\n");
+                        sb.Append($"   轨迹:\n");
+                        sb.Append($"   -  目标频率: {_TimeMag / _SimulationData.KinematicsResolution:N0} Hz\n");
+                        sb.Append($"   -  频率: {_SimulationData.KinematicsPFS:N0} Hz\n");
+                        sb.Append($"   -  当前帧/最新帧: {_LatestFrameKinematicsId}/{latestFrame?.KinematicsId ?? 0}\n");
                         sb.Append($"   -  使用中/已缓存: {_UsingFrameCount}/{_SimulationData.CachedFrameCount} 帧\n");
-                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
-                        sb.Append($"   -  命中缓存/已提交: {_TransformCachedNum}/{_TransformRequestNum} 次\n");
-                        sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N1} Hz\n");
-                        double fps = _FrameRateCounter.Frequency;
-                        if (fps < 10)
-                        {
-                            sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS  [性能不佳]\n\n");
-                        }
-                        else
-                        {
-                            sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
-                        }
-                        sb.Append($"最新帧: (D) {_SimulationData.LatestFrame.DynamicsId}, (K) {_SimulationData.LatestFrame.KinematicsId}\n");
-                        sb.Append($"当前帧: (D) {_LatestFrameDynamicsId}, (K) {_LatestFrameKinematicsId}, (G) {_RenderCount}\n\n");
+                        sb.Append($"   仿射变换:\n");
+                        sb.Append($"   -  频率: {_TransformFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   -  命中缓存/提交请求: {_TransformCachedFrequencyCounter.Frequency:N0}/{_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   刷新率: {_FrameRateCounter.Frequency:N0} FPS\n\n");
                         sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_CurrentTime))}");
-                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 215));
+                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 275));
                     }
                     else
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.Append("性能:\n");
-                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
-                        sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
+                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   刷新率: {_FrameRateCounter.Frequency:N0} FPS\n\n");
                         graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 55));
                     }
 
@@ -756,9 +728,6 @@ namespace Multibody
                     _CurrentTime = Math.Min(_SimulationData.LatestFrame.Time, (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag);
                     Snapshot snapshot = _SimulationData.GetSnapshot(_CurrentTime - _SimulationData.TrackLength, _CurrentTime);
 
-                    _TransformRequestNum = 0;
-                    _TransformCachedNum = 0;
-
                     _LatestFrameDynamicsId = -1;
                     _LatestFrameKinematicsId = -1;
 
@@ -773,6 +742,8 @@ namespace Multibody
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
                         int transformNum = 0;
+                        int transformRequestNum = 0;
+                        int transformCachedNum = 0;
                         int lineNum = 0;
 
                         if (_UsingFrameCount > 1)
@@ -783,10 +754,10 @@ namespace Multibody
                                 int j = _UsingFrameCount - 1, k = _UsingFrameCount - 2;
 
                                 Particle particle1 = snapshot.GetFrame(j).GetParticle(i);
-                                _TransformRequestNum++;
+                                transformRequestNum++;
                                 if (_GetOrCacheTransformResult(particle1, out PointD pt1, out _))
                                 {
-                                    _TransformCachedNum++;
+                                    transformCachedNum++;
                                 }
                                 else
                                 {
@@ -794,10 +765,10 @@ namespace Multibody
                                 }
 
                                 Particle particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                _TransformRequestNum++;
+                                transformRequestNum++;
                                 if (_GetOrCacheTransformResult(particle2, out PointD pt2, out _))
                                 {
-                                    _TransformCachedNum++;
+                                    transformCachedNum++;
                                 }
                                 else
                                 {
@@ -821,10 +792,10 @@ namespace Multibody
                                     {
                                         k--;
                                         particle2 = snapshot.GetFrame(k).GetParticle(i);
-                                        _TransformRequestNum++;
+                                        transformRequestNum++;
                                         if (_GetOrCacheTransformResult(particle2, out pt2, out _))
                                         {
-                                            _TransformCachedNum++;
+                                            transformCachedNum++;
                                         }
                                         else
                                         {
@@ -844,10 +815,10 @@ namespace Multibody
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = latestFrame.GetParticle(i);
-                            _TransformRequestNum++;
+                            transformRequestNum++;
                             if (_GetOrCacheTransformResult(particle, out PointD pt, out double z))
                             {
-                                _TransformCachedNum++;
+                                transformCachedNum++;
                             }
                             else
                             {
@@ -882,13 +853,19 @@ namespace Multibody
                         {
                             _TransformFrequencyCounter.Update(transformNum);
                         }
+                        if (transformRequestNum > 0)
+                        {
+                            _TransformRequestFrequencyCounter.Update(transformRequestNum);
+                        }
+                        if (transformCachedNum > 0)
+                        {
+                            _TransformCachedFrequencyCounter.Update(transformCachedNum);
+                        }
                         if (lineNum > 0)
                         {
                             _DrawLineFrequencyCounter.Update(lineNum);
                         }
                     }
-
-                    _RenderCount++;
                 }
                 else
                 {
@@ -933,14 +910,10 @@ namespace Multibody
 
                         _TransformFrequencyCounter.Update(particleCount);
                     }
-
-                    StringBuilder sb = new StringBuilder();
-                    sb.Append("性能:\n");
-                    sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N1} Hz\n");
-                    sb.Append($"   刷新率(G): {_FrameRateCounter.Frequency:N1} FPS\n\n");
-                    graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, bitmap.Height - 55));
                 }
             }
+
+            _FrameRateCounter.Update();
 
             return bitmap;
         }
@@ -958,8 +931,6 @@ namespace Multibody
         private void _RedrawBitmap()
         {
             _RedrawControl.Invoke(_RedrawMethod, _CreateBitmap());
-
-            _FrameRateCounter.Update();
         }
 
         #endregion
