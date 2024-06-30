@@ -164,10 +164,7 @@ namespace Multibody
         }
 
         // 仿真停止。
-        private void _SimulationStop()
-        {
-            _SimulationIsRunning = false;
-        }
+        private void _SimulationStop() => _SimulationIsRunning = false;
 
         #endregion
 
@@ -957,10 +954,7 @@ namespace Multibody
         private FrequencyCounter _FrameRateCounter = new FrequencyCounter(); // 重绘帧率（FPS）的频率计数器。
 
         // 重绘。
-        private void _RedrawBitmap()
-        {
-            _RedrawControl.Invoke(_RedrawMethod, _CreateBitmap());
-        }
+        private void _RedrawBitmap() => _RedrawControl.Invoke(_RedrawMethod, _CreateBitmap());
 
         #endregion
     }

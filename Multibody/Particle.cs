@@ -66,15 +66,12 @@ namespace Multibody
 
         public double DistanceToScreen { get; set; } // 到屏幕的距离（世界坐标系）。
 
-        public TransformResultCache Copy()
+        public TransformResultCache Copy() => new TransformResultCache()
         {
-            return new TransformResultCache()
-            {
-                TransformID = this.TransformID,
-                ScreenLocation = this.ScreenLocation,
-                DistanceToScreen = this.DistanceToScreen,
-            };
-        }
+            TransformID = this.TransformID,
+            ScreenLocation = this.ScreenLocation,
+            DistanceToScreen = this.DistanceToScreen,
+        };
     }
 
     // 粒子，表示三维空间中的有体积的质点。
@@ -187,13 +184,10 @@ namespace Multibody
         }
 
         // 返回此 Particle 对象的副本。
-        public Particle Copy()
+        public Particle Copy() => new Particle(_ConstantAttr, _Location, _Velocity, _Force)
         {
-            return new Particle(_ConstantAttr, _Location, _Velocity, _Force)
-            {
-                _TransformResultCache = this._TransformResultCache?.Copy()
-            };
-        }
+            _TransformResultCache = this._TransformResultCache?.Copy()
+        };
 
         // 将此 Particle 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)
@@ -271,9 +265,6 @@ namespace Multibody
             _Force = PointD3D.Zero;
         }
 
-        public void Freeze()
-        {
-            _Frozen = true;
-        }
+        public void Freeze() => _Frozen = true;
     }
 }

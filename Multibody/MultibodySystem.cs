@@ -77,10 +77,7 @@ namespace Multibody
         public FrequencyCounter KinematicsFrequencyCounter => _KinematicsFrequencyCounter;
 
         // 获取此 MultibodySystem 对象的指定帧。
-        public Frame GetFrame(int index)
-        {
-            return _FrameHistory[index];
-        }
+        public Frame GetFrame(int index) => _FrameHistory[index];
 
         // 将此 MultibodySystem 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)

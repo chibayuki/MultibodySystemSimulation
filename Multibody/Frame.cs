@@ -96,29 +96,17 @@ namespace Multibody
         // 获取或设置此 Frame 对象基于动力学的 ID。
         public long DynamicsId
         {
-            get
-            {
-                return _DynamicsId;
-            }
+            get => _DynamicsId;
 
-            set
-            {
-                _DynamicsId = value;
-            }
+            set => _DynamicsId = value;
         }
 
         // 获取或设置此 Frame 对象基于运动学的 ID。
         public long KinematicsId
         {
-            get
-            {
-                return _KinematicsId;
-            }
+            get => _KinematicsId;
 
-            set
-            {
-                _KinematicsId = value;
-            }
+            set => _KinematicsId = value;
         }
 
         // 获取此 Frame 对象的相对时刻（秒）。
@@ -131,14 +119,11 @@ namespace Multibody
         public Particle GetParticle(int index) => _Particles[index];
 
         // 获取此 Frame 对象的副本。
-        public Frame Copy()
+        public Frame Copy() => new Frame(_Time, _Particles)
         {
-            return new Frame(_Time, _Particles)
-            {
-                _DynamicsId = this._DynamicsId,
-                _KinematicsId = this._KinematicsId,
-            };
-        }
+            _DynamicsId = this._DynamicsId,
+            _KinematicsId = this._KinematicsId,
+        };
 
         // 将此 Frame 对象运动指定的时长（秒）。
         public void NextMoment(double seconds)

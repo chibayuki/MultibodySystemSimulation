@@ -92,11 +92,7 @@ namespace Multibody
             };
 
             _InteractiveManager = new InteractiveManager(PictureBox_View, _RedrawMethod, _ViewSize);
-
-            foreach (Particle particle in _Particles)
-            {
-                _InteractiveManager.AddParticle(particle);
-            }
+            _InteractiveManager.AddParticles(_Particles);
         }
 
         private void Form_Loaded(object sender, EventArgs e)
@@ -126,20 +122,11 @@ namespace Multibody
             _InteractiveManager.SimulationStart();
         }
 
-        private void Form_Closed(object sender, EventArgs e)
-        {
-            _InteractiveManager.SimulationStop();
-        }
+        private void Form_Closed(object sender, EventArgs e) => _InteractiveManager.SimulationStop();
 
-        private void Form_Resize(object sender, EventArgs e)
-        {
-            _InteractiveManager.UpdateViewSize(_ViewSize);
-        }
+        private void Form_Resize(object sender, EventArgs e) => _InteractiveManager.UpdateViewSize(_ViewSize);
 
-        private void Form_SizeChanged(object sender, EventArgs e)
-        {
-            FormManager.OnResize();
-        }
+        private void Form_SizeChanged(object sender, EventArgs e) => FormManager.OnResize();
 
         private void Form_ThemeChanged(object sender, EventArgs e)
         {

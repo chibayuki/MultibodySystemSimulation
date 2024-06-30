@@ -63,6 +63,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _SimulationStateLock.EnterWriteLock();
@@ -108,6 +109,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -142,6 +144,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -176,6 +179,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -210,6 +214,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _StaticDataLock.EnterWriteLock();
@@ -254,6 +259,26 @@ namespace Multibody
         }
 
         // 添加粒子。
+        public void AddParticles(IEnumerable<Particle> particles)
+        {
+            _ParticlesLock.EnterWriteLock();
+
+            try
+            {
+                foreach (Particle particle in particles)
+                {
+                    Particle newParticle = particle.Copy();
+                    newParticle.Freeze();
+                    _Particles.Add(newParticle);
+                }
+            }
+            finally
+            {
+                _ParticlesLock.ExitWriteLock();
+            }
+        }
+
+        // 添加粒子。
         public void AddParticle(Particle particle)
         {
             _ParticlesLock.EnterWriteLock();
@@ -263,6 +288,21 @@ namespace Multibody
                 Particle newParticle = particle.Copy();
                 newParticle.Freeze();
                 _Particles.Add(newParticle);
+            }
+            finally
+            {
+                _ParticlesLock.ExitWriteLock();
+            }
+        }
+
+        // 删除粒子。
+        public void RemoveAllParticles()
+        {
+            _ParticlesLock.EnterWriteLock();
+
+            try
+            {
+                _Particles.Clear();
             }
             finally
             {
@@ -572,6 +612,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _GraphicsLock.EnterWriteLock();
@@ -606,6 +647,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _GraphicsLock.EnterWriteLock();
@@ -649,6 +691,7 @@ namespace Multibody
 
                 return result;
             }
+
             set
             {
                 _RenderLock.EnterWriteLock();

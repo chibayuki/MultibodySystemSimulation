@@ -87,12 +87,15 @@ namespace Multibody
 
         public double DynamicsResolution
         {
-            get
-            {
-                return _SimulationData.DynamicsResolution;
-            }
+            get => _SimulationData.DynamicsResolution;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 if (_SimulationData.SimulationIsRunning)
                 {
                     throw new InvalidOperationException();
@@ -106,12 +109,15 @@ namespace Multibody
 
         public double KinematicsResolution
         {
-            get
-            {
-                return _SimulationData.KinematicsResolution;
-            }
+            get => _SimulationData.KinematicsResolution;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 if (_SimulationData.SimulationIsRunning)
                 {
                     throw new InvalidOperationException();
@@ -125,12 +131,15 @@ namespace Multibody
 
         public double CacheSize
         {
-            get
-            {
-                return _SimulationData.CacheSize;
-            }
+            get => _SimulationData.CacheSize;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 if (_SimulationData.SimulationIsRunning)
                 {
                     throw new InvalidOperationException();
@@ -144,12 +153,15 @@ namespace Multibody
 
         public double TrackLength
         {
-            get
-            {
-                return _SimulationData.TrackLength;
-            }
+            get => _SimulationData.TrackLength;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 if (_SimulationData.SimulationIsRunning)
                 {
                     throw new InvalidOperationException();
@@ -167,8 +179,31 @@ namespace Multibody
         public int ParticleCount => _SimulationData.ParticleCount;
 
         // 添加粒子。
+        public void AddParticles(IEnumerable<Particle> particles)
+        {
+            if (particles is null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            if (_SimulationData.SimulationIsRunning)
+            {
+                throw new InvalidOperationException();
+            }
+
+            //
+
+            _SimulationData.AddParticles(particles);
+        }
+
+        // 添加粒子。
         public void AddParticle(Particle particle)
         {
+            if (particle is null)
+            {
+                throw new ArgumentNullException();
+            }
+
             if (_SimulationData.SimulationIsRunning)
             {
                 throw new InvalidOperationException();
@@ -180,11 +215,29 @@ namespace Multibody
         }
 
         // 删除粒子。
+        public void RemoveAllParticles()
+        {
+            if (_SimulationData.SimulationIsRunning)
+            {
+                throw new InvalidOperationException();
+            }
+
+            //
+
+            _SimulationData.RemoveAllParticles();
+        }
+
+        // 删除粒子。
         public void RemoveParticle(int index)
         {
             if (_SimulationData.SimulationIsRunning)
             {
                 throw new InvalidOperationException();
+            }
+
+            if (index < 0 || index >= _SimulationData.ParticleCount)
+            {
+                throw new IndexOutOfRangeException();
             }
 
             //
@@ -198,9 +251,19 @@ namespace Multibody
         // 设置粒子。
         public void SetParticle(int index, Particle particle)
         {
+            if (particle is null)
+            {
+                throw new ArgumentNullException();
+            }
+
             if (_SimulationData.SimulationIsRunning)
             {
                 throw new InvalidOperationException();
+            }
+
+            if (index < 0 || index >= _SimulationData.ParticleCount)
+            {
+                throw new IndexOutOfRangeException();
             }
 
             //
@@ -224,24 +287,30 @@ namespace Multibody
 
         public double FocalLength
         {
-            get
-            {
-                return _SimulationData.FocalLength;
-            }
+            get => _SimulationData.FocalLength;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetFocalLength) { RequestData = value });
             }
         }
 
         public double SpaceMag
         {
-            get
-            {
-                return _SimulationData.SpaceMag;
-            }
+            get => _SimulationData.SpaceMag;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetSpaceMag) { RequestData = value });
             }
         }
@@ -249,55 +318,29 @@ namespace Multibody
         //
 
         // 视图控制开始。
-        public void ViewOperationStart()
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationStart));
-        }
+        public void ViewOperationStart() => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationStart));
 
         // 视图控制停止。
-        public void ViewOperationStop()
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationStop));
-        }
+        public void ViewOperationStop() => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationStop));
 
         // 视图控制。
-        public void ViewOperationOffsetX(double offset)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetX, offset) } });
-        }
+        public void ViewOperationOffsetX(double offset) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetX, offset) } });
 
-        public void ViewOperationOffsetY(double offset)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetY, offset) } });
-        }
+        public void ViewOperationOffsetY(double offset) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetY, offset) } });
 
-        public void ViewOperationOffsetXY(PointD offset)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetX, offset.X), (Renderer.ViewOperationType.OffsetY, offset.Y) } });
-        }
+        public void ViewOperationOffsetXY(PointD offset) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetX, offset.X), (Renderer.ViewOperationType.OffsetY, offset.Y) } });
 
-        public void ViewOperationOffsetZ(double offset)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetZ, offset) } });
-        }
+        public void ViewOperationOffsetZ(double offset) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.OffsetZ, offset) } });
 
-        public void ViewOperationRotateX(double rotate)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateX, rotate) } });
-        }
+        public void ViewOperationRotateX(double rotate) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateX, rotate) } });
 
-        public void ViewOperationRotateY(double rotate)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateY, rotate) } });
-        }
+        public void ViewOperationRotateY(double rotate) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateY, rotate) } });
 
-        public void ViewOperationRotateZ(double rotate)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateZ, rotate) } });
-        }
+        public void ViewOperationRotateZ(double rotate) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.ViewOperationUpdateParam) { RequestData = new (Renderer.ViewOperationType, double)[] { (Renderer.ViewOperationType.RotateZ, rotate) } });
 
         //
 
+        // 更新按键。
         public void PressedKeysChanged(HashSet<Keys> pressedKeys)
         {
             Keys[] data = Array.Empty<Keys>();
@@ -312,10 +355,7 @@ namespace Multibody
         //
 
         // 更新视图大小。
-        public void UpdateViewSize(Size viewSize)
-        {
-            _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.UpdateViewSize) { RequestData = viewSize });
-        }
+        public void UpdateViewSize(Size viewSize) => _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.UpdateViewSize) { RequestData = viewSize });
 
         #endregion
 
@@ -323,12 +363,15 @@ namespace Multibody
 
         public double TimeMag
         {
-            get
-            {
-                return _SimulationData.TimeMag;
-            }
+            get => _SimulationData.TimeMag;
+
             set
             {
+                if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
                 _Renderer.PushMessage(new UIMessage((int)Renderer.MessageCode.SetTimeMag) { RequestData = value });
             }
         }
