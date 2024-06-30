@@ -411,8 +411,10 @@ namespace Multibody
 
         private double _CurrentTime = 0; // 多体系统的当前时间。
         private int _UsingFrameCount = 0; // 使用中的多体系统快照帧数。
-        private long _LatestFrameDynamicsId = -1; // 最新的动力学帧ID。
-        private long _LatestFrameKinematicsId = -1; // 最新的运动学帧ID。
+        private long _OldestFrameDynamicsId = -1; // 使用中的最旧的动力学帧ID。
+        private long _OldestFrameKinematicsId = -1; // 使用中的最旧的运动学帧ID。
+        private long _LatestFrameDynamicsId = -1; // 使用中的最新的动力学帧ID。
+        private long _LatestFrameKinematicsId = -1; // 使用中的最新的运动学帧ID。
 
         private FrequencyCounter _TransformFrequencyCounter = new FrequencyCounter(); // 仿射变换的频率计数器。
         private FrequencyCounter _TransformRequestFrequencyCounter = new FrequencyCounter(); // 仿射变换提交请求的频率计数器。
@@ -578,6 +580,7 @@ namespace Multibody
                     if (transformNum > 0)
                     {
                         _TransformFrequencyCounter.Update(transformNum);
+                        _TransformRequestFrequencyCounter.Update(transformNum);
                     }
                     if (lineNum > 0)
                     {
@@ -637,29 +640,29 @@ namespace Multibody
                         Frame latestFrame = _SimulationData.LatestFrame;
                         sb.Append("性能:\n");
                         sb.Append($"   动力学方程:\n");
-                        sb.Append($"   -  目标频率: {_TimeMag / _SimulationData.DynamicsResolution:N0} Hz\n");
-                        sb.Append($"   -  频率: {_SimulationData.DynamicsPFS:N0} Hz\n");
-                        sb.Append($"   -  当前帧/最新帧: {_LatestFrameDynamicsId}/{latestFrame?.DynamicsId ?? 0}\n");
+                        sb.Append($"   -  频率 / 目标频率:  {_SimulationData.DynamicsFPS:N0} / {_TimeMag / _SimulationData.DynamicsResolution:N0} Hz\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  [{_OldestFrameDynamicsId:N0}, {_LatestFrameDynamicsId:N0}] / {latestFrame?.DynamicsId ?? 0:N0}\n");
                         sb.Append($"   轨迹:\n");
-                        sb.Append($"   -  目标频率: {_TimeMag / _SimulationData.KinematicsResolution:N0} Hz\n");
-                        sb.Append($"   -  频率: {_SimulationData.KinematicsPFS:N0} Hz\n");
-                        sb.Append($"   -  当前帧/最新帧: {_LatestFrameKinematicsId}/{latestFrame?.KinematicsId ?? 0}\n");
-                        sb.Append($"   -  使用中/已缓存: {_UsingFrameCount}/{_SimulationData.CachedFrameCount} 帧\n");
+                        sb.Append($"   -  频率 / 目标频率:  {_SimulationData.KinematicsFPS:N0} / {_TimeMag / _SimulationData.KinematicsResolution:N0} Hz\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  [{_OldestFrameKinematicsId:N0}, {_LatestFrameKinematicsId:N0}] / {latestFrame?.KinematicsId ?? 0:N0}\n");
+                        sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount:N0} / {_SimulationData.CachedFrameCount:N0} 帧\n");
                         sb.Append($"   仿射变换:\n");
-                        sb.Append($"   -  频率: {_TransformFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   -  命中缓存/提交请求: {_TransformCachedFrequencyCounter.Frequency:N0}/{_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   直线: {_DrawLineFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   刷新率: {_FrameRateCounter.Frequency:N0} FPS\n\n");
-                        sb.Append($"时间: {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_CurrentTime))}");
-                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 275));
+                        sb.Append($"   -  频率:  {_TransformFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   -  命中缓存 / 提交请求:  {_TransformCachedFrequencyCounter.Frequency:N0} / {_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   直线:  {_DrawLineFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   刷新率:  {_FrameRateCounter.Frequency:N0} FPS\n\n");
+                        sb.Append($"时间:  {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_CurrentTime))}");
+                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 245));
                     }
                     else
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.Append("性能:\n");
-                        sb.Append($"   仿射变换: {_TransformFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   刷新率: {_FrameRateCounter.Frequency:N0} FPS\n\n");
-                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 55));
+                        sb.Append($"   仿射变换:\n");
+                        sb.Append($"   -  频率:  {_TransformFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   -  命中缓存 / 提交请求:  {_TransformCachedFrequencyCounter.Frequency:N0} / {_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
+                        sb.Append($"   刷新率:  {_FrameRateCounter.Frequency:N0} FPS\n\n");
+                        graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 85));
                     }
 
                     bool pressedKeysAreLegal = false;
@@ -728,13 +731,18 @@ namespace Multibody
                     _CurrentTime = Math.Min(_SimulationData.LatestFrame.Time, (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag);
                     Snapshot snapshot = _SimulationData.GetSnapshot(_CurrentTime - _SimulationData.TrackLength, _CurrentTime);
 
+                    _OldestFrameDynamicsId = -1;
+                    _OldestFrameKinematicsId = -1;
                     _LatestFrameDynamicsId = -1;
                     _LatestFrameKinematicsId = -1;
 
                     _UsingFrameCount = snapshot.FrameCount;
                     if (snapshot != null && _UsingFrameCount > 0)
                     {
+                        Frame oldestFrame = snapshot.OldestFrame;
                         Frame latestFrame = snapshot.LatestFrame;
+                        _OldestFrameDynamicsId = oldestFrame.DynamicsId;
+                        _OldestFrameKinematicsId = oldestFrame.KinematicsId;
                         _LatestFrameDynamicsId = latestFrame.DynamicsId;
                         _LatestFrameKinematicsId = latestFrame.KinematicsId;
                         int particleCount = latestFrame.ParticleCount;
@@ -875,40 +883,61 @@ namespace Multibody
                     {
                         RectangleF bitmapBounds = new RectangleF(new PointF(), bitmap.Size);
 
+                        int transformNum = 0;
+                        int transformRequestNum = 0;
+                        int transformCachedNum = 0;
+
                         int lowRadius = Math.Min(bitmap.Width, bitmap.Height) / 2;
                         int highRadius = Math.Max(lowRadius * 2, Math.Max(bitmap.Width, bitmap.Height) / 2);
                         for (int i = 0; i < particleCount; i++)
                         {
                             Particle particle = _SimulationData.GetParticle(i);
-
-                            if (_WorldToScreen(particle.Location, out PointD pt, out double z))
+                            transformRequestNum++;
+                            if (_GetOrCacheTransformResult(particle, out PointD pt, out double z))
                             {
-                                float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
+                                transformCachedNum++;
+                            }
+                            else
+                            {
+                                transformNum++;
+                            }
 
-                                if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
+                            float radius = Math.Max(1, (float)(particle.Radius * _FocalLength / z));
+
+                            if (radius < highRadius && Geometry.CircleInnerIsVisibleInRectangle(pt, radius, bitmapBounds))
+                            {
+                                RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
+                                if (radius <= lowRadius)
                                 {
-                                    RectangleF ellipse = new RectangleF((float)pt.X - radius, (float)pt.Y - radius, radius * 2, radius * 2);
-                                    if (radius <= lowRadius)
+                                    graph.FillEllipse(particle.Brush, ellipse);
+                                }
+                                else
+                                {
+                                    int alpha = (int)Math.Round(255 * (highRadius - radius) / (highRadius - lowRadius));
+                                    if (alpha >= 1)
                                     {
-                                        graph.FillEllipse(particle.Brush, ellipse);
-                                    }
-                                    else
-                                    {
-                                        int alpha = (int)Math.Round(255 * (highRadius - radius) / (highRadius - lowRadius));
-                                        if (alpha >= 1)
+                                        Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
+                                        using (SolidBrush br = new SolidBrush(cr))
                                         {
-                                            Color cr = Color.FromArgb(Math.Min(255, alpha), particle.Color);
-                                            using (SolidBrush br = new SolidBrush(cr))
-                                            {
-                                                graph.FillEllipse(br, ellipse);
-                                            }
+                                            graph.FillEllipse(br, ellipse);
                                         }
                                     }
                                 }
                             }
                         }
 
-                        _TransformFrequencyCounter.Update(particleCount);
+                        if (transformNum > 0)
+                        {
+                            _TransformFrequencyCounter.Update(transformNum);
+                        }
+                        if (transformRequestNum > 0)
+                        {
+                            _TransformRequestFrequencyCounter.Update(transformRequestNum);
+                        }
+                        if (transformCachedNum > 0)
+                        {
+                            _TransformCachedFrequencyCounter.Update(transformCachedNum);
+                        }
                     }
                 }
             }

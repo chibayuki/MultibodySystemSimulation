@@ -135,9 +135,7 @@ namespace Multibody
             _TransformResultCache = null;
         }
 
-        public Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity) : this(id, mass, radius, color, location, velocity, PointD3D.Zero)
-        {
-        }
+        public Particle(int id, double mass, double radius, Color color, PointD3D location, PointD3D velocity) : this(id, mass, radius, color, location, velocity, PointD3D.Zero) { }
 
         // 获取此 Particle 对象的ID。
         public int Id => _ConstantAttr.Id;

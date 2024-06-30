@@ -24,9 +24,7 @@ namespace Multibody
     {
         #region 构造函数
 
-        public SimulationData()
-        {
-        }
+        public SimulationData() { }
 
         ~SimulationData()
         {
@@ -262,7 +260,9 @@ namespace Multibody
 
             try
             {
-                _Particles.Add(particle.Copy());
+                Particle newParticle = particle.Copy();
+                newParticle.Freeze();
+                _Particles.Add(newParticle);
             }
             finally
             {
@@ -294,7 +294,7 @@ namespace Multibody
 
             try
             {
-                result = _Particles[index].Copy();
+                result = _Particles[index];
             }
             finally
             {
@@ -311,7 +311,9 @@ namespace Multibody
 
             try
             {
-                _Particles[index] = particle.Copy();
+                Particle newParticle = particle.Copy();
+                newParticle.Freeze();
+                _Particles[index] = newParticle;
             }
             finally
             {
@@ -416,7 +418,7 @@ namespace Multibody
         }
 
         // 获取多体系统当前的动力学频率。
-        public double DynamicsPFS
+        public double DynamicsFPS
         {
             get
             {
@@ -438,7 +440,7 @@ namespace Multibody
         }
 
         // 获取多体系统当前的运动学频率。
-        public double KinematicsPFS
+        public double KinematicsFPS
         {
             get
             {

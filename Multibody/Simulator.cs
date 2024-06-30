@@ -45,9 +45,7 @@ namespace Multibody
 
         #region 消息处理器
 
-        protected override void ProcessMessage(UIMessage message)
-        {
-        }
+        protected override void ProcessMessage(UIMessage message) { }
 
         protected override void MessageLoop()
         {

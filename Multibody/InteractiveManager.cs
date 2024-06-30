@@ -213,10 +213,10 @@ namespace Multibody
         #region 粒子与多体系统（动态数据）
 
         // 获取多体系统当前的动力学频率。
-        public double DynamicsPFS => _SimulationData.DynamicsPFS;
+        public double DynamicsPFS => _SimulationData.DynamicsFPS;
 
         // 获取多体系统当前的运动学频率。
-        public double KinematicsPFS => _SimulationData.KinematicsPFS;
+        public double KinematicsPFS => _SimulationData.KinematicsFPS;
 
         #endregion
 

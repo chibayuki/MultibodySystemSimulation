@@ -41,9 +41,7 @@ namespace Multibody
 
         public FormManager FormManager { get; private set; }
 
-        public MainForm() : this(null)
-        {
-        }
+        public MainForm() : this(null) { }
 
         public MainForm(FormManager owner)
         {
