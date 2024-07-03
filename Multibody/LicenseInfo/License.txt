@@ -1,6 +1,0 @@
-﻿Copyright © 2024 chibayuki@foxmail.com
-
-多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.117.1000.M2.201101-1440
-
-"多体系统模拟" (MultibodySystemSimulation) is released under the GPLv3 license, see GPLv3.txt for more information.
