@@ -408,8 +408,6 @@ namespace Multibody
 
         private double _CurrentTime = 0; // 多体系统的当前时间。
         private int _UsingFrameCount = 0; // 使用中的多体系统快照帧数。
-        private long _OldestFrameDynamicsId = -1; // 使用中的最旧的动力学帧ID。
-        private long _OldestFrameKinematicsId = -1; // 使用中的最旧的运动学帧ID。
         private long _LatestFrameDynamicsId = -1; // 使用中的最新的动力学帧ID。
         private long _LatestFrameKinematicsId = -1; // 使用中的最新的运动学帧ID。
 
@@ -420,6 +418,7 @@ namespace Multibody
         //
 
         private double _GridDistance = 500 * SimulationData.InitialSpaceMag; // 绘制坐标系网格的间距（米）。
+        private const double _GridDepth = 5000; // 绘制坐标系网格的最远距离（像素）。
 
         // 更新坐标系网格间距。
         private void _UpdateGridDistance()
@@ -480,7 +479,6 @@ namespace Multibody
                     graph.SmoothingMode = SmoothingMode.AntiAlias;
                     graph.Clear(_RedrawControl.BackColor);
 
-                    double gridDepth = 5000; // 绘制坐标系网格的最远距离（像素）
                     PointD3D[] pts;
                     if (_FocalLength > 0)
                     {
@@ -493,17 +491,17 @@ namespace Multibody
                         };
                         for (int i = 0; i < pts.Length; i++)
                         {
-                            pts[i] = (pts[i] * gridDepth / (_FocalLength / _SpaceMag)).ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
+                            pts[i] = (pts[i] * _GridDepth / (_FocalLength / _SpaceMag)).ScaleCopy(_SpaceMag).AffineTransformCopy(_InverseAffineTransformation);
                         }
                     }
                     else
                     {
                         pts = new PointD3D[] {
                             PointD3D.Zero,
-                            new PointD3D(-bitmapWidth, -bitmapHeight, gridDepth * 2) / 2,
-                            new PointD3D(-bitmapWidth, bitmapHeight, gridDepth * 2) / 2,
-                            new PointD3D(bitmapWidth, bitmapHeight, gridDepth * 2) / 2,
-                            new PointD3D(bitmapWidth, -bitmapHeight, gridDepth * 2) / 2
+                            new PointD3D(-bitmapWidth, -bitmapHeight, _GridDepth * 2) / 2,
+                            new PointD3D(-bitmapWidth, bitmapHeight, _GridDepth * 2) / 2,
+                            new PointD3D(bitmapWidth, bitmapHeight, _GridDepth * 2) / 2,
+                            new PointD3D(bitmapWidth, -bitmapHeight, _GridDepth * 2) / 2
                         };
                         for (int i = 0; i < pts.Length; i++)
                         {
@@ -550,7 +548,7 @@ namespace Multibody
                                 {
                                     if (_WorldToScreen(pt1, pt2, out PointD scrPt1, out PointD scrPt2, out double z1, out double z2))
                                     {
-                                        int alpha = (int)Math.Round(255 * Math.Pow(2, -(Math.Min(z1, z2) / (gridDepth * _SpaceMag / 5))));
+                                        int alpha = (int)Math.Round(255 * Math.Pow(2, -(Math.Min(z1, z2) / (_GridDepth * _SpaceMag / 5))));
                                         if (alpha >= 1)
                                         {
                                             Color cr = Color.FromArgb(Math.Min(255, alpha), 64, 64, 64);
@@ -638,10 +636,10 @@ namespace Multibody
                         sb.Append("性能:\n");
                         sb.Append($"   动力学方程:\n");
                         sb.Append($"   -  频率 / 目标频率:  {_SimulationData.DynamicsFPS:N0} / {_TimeMag / _SimulationData.DynamicsResolution:N0} Hz\n");
-                        sb.Append($"   -  当前帧 / 最新帧:  [{_OldestFrameDynamicsId:N0}, {_LatestFrameDynamicsId:N0}] / {latestFrame?.DynamicsId ?? 0:N0}\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameDynamicsId:N0} / {latestFrame?.DynamicsId ?? 0:N0}\n");
                         sb.Append($"   轨迹:\n");
                         sb.Append($"   -  频率 / 目标频率:  {_SimulationData.KinematicsFPS:N0} / {_TimeMag / _SimulationData.KinematicsResolution:N0} Hz\n");
-                        sb.Append($"   -  当前帧 / 最新帧:  [{_OldestFrameKinematicsId:N0}, {_LatestFrameKinematicsId:N0}] / {latestFrame?.KinematicsId ?? 0:N0}\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameKinematicsId:N0} / {latestFrame?.KinematicsId ?? 0:N0}\n");
                         sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount:N0} / {_SimulationData.CachedFrameCount:N0} 帧\n");
                         sb.Append($"   仿射变换:\n");
                         sb.Append($"   -  频率:  {_TransformFrequencyCounter.Frequency:N0} Hz\n");
@@ -728,18 +726,13 @@ namespace Multibody
                     _CurrentTime = Math.Min(_SimulationData.LatestFrame.Time, (DateTime.UtcNow - _SimulationStartTime).TotalSeconds * _TimeMag);
                     Snapshot snapshot = _SimulationData.GetSnapshot(_CurrentTime - _SimulationData.TrackLength, _CurrentTime);
 
-                    _OldestFrameDynamicsId = -1;
-                    _OldestFrameKinematicsId = -1;
                     _LatestFrameDynamicsId = -1;
                     _LatestFrameKinematicsId = -1;
 
                     _UsingFrameCount = snapshot.FrameCount;
                     if (snapshot != null && _UsingFrameCount > 0)
                     {
-                        Frame oldestFrame = snapshot.OldestFrame;
                         Frame latestFrame = snapshot.LatestFrame;
-                        _OldestFrameDynamicsId = oldestFrame.DynamicsId;
-                        _OldestFrameKinematicsId = oldestFrame.KinematicsId;
                         _LatestFrameDynamicsId = latestFrame.DynamicsId;
                         _LatestFrameKinematicsId = latestFrame.KinematicsId;
                         int particleCount = latestFrame.ParticleCount;
