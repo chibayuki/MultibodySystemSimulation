@@ -591,6 +591,7 @@ namespace Multibody
 
         private Bitmap _BackgroundBitmap = null; // 背景（坐标系网格+提示信息）位图。
 
+        private const double _RecreateBackgroundBitmapDeltaMS = 100;
         private DateTime _LastCreateBackgroundBitmapTime = DateTime.MinValue;
 
         // 删除背景位图。
@@ -616,7 +617,7 @@ namespace Multibody
         // 获取或生成背景位图。
         private Bitmap _GetOrCreateBackgroundBitmap()
         {
-            if (_BackgroundBitmap != null && (DateTime.UtcNow - _LastCreateBackgroundBitmapTime).TotalMilliseconds >= 100)
+            if (_BackgroundBitmap != null && (DateTime.UtcNow - _LastCreateBackgroundBitmapTime).TotalMilliseconds >= _RecreateBackgroundBitmapDeltaMS)
             {
                 _DisposeBackgroundBitmap();
             }
@@ -633,20 +634,34 @@ namespace Multibody
                     {
                         StringBuilder sb = new StringBuilder();
                         Frame latestFrame = _SimulationData.LatestFrame;
+                        TimeSpan timeSpan = TimeSpan.FromSeconds(_CurrentTime);
                         sb.Append("性能:\n");
                         sb.Append($"   动力学方程:\n");
-                        sb.Append($"   -  频率 / 目标频率:  {_SimulationData.DynamicsFPS:N0} / {_TimeMag / _SimulationData.DynamicsResolution:N0} Hz\n");
-                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameDynamicsId:N0} / {latestFrame?.DynamicsId ?? 0:N0}\n");
+                        sb.Append($"   -  频率 / 目标频率:  {Texting.GetScientificNotationString(_SimulationData.DynamicsFPS, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TimeMag / _SimulationData.DynamicsResolution, 4, true, true, "Hz")}\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameDynamicsId} / {latestFrame?.DynamicsId ?? 0}\n");
                         sb.Append($"   轨迹:\n");
-                        sb.Append($"   -  频率 / 目标频率:  {_SimulationData.KinematicsFPS:N0} / {_TimeMag / _SimulationData.KinematicsResolution:N0} Hz\n");
-                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameKinematicsId:N0} / {latestFrame?.KinematicsId ?? 0:N0}\n");
-                        sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount:N0} / {_SimulationData.CachedFrameCount:N0} 帧\n");
+                        sb.Append($"   -  频率 / 目标频率:  {Texting.GetScientificNotationString(_SimulationData.KinematicsFPS, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TimeMag / _SimulationData.KinematicsResolution, 4, true, true, "Hz")}\n");
+                        sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameKinematicsId} / {latestFrame?.KinematicsId ?? 0}\n");
+                        sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount} / {_SimulationData.CachedFrameCount} 帧\n");
                         sb.Append($"   仿射变换:\n");
-                        sb.Append($"   -  频率:  {_TransformFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   -  命中缓存 / 提交请求:  {_TransformCachedFrequencyCounter.Frequency:N0} / {_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   直线:  {_DrawLineFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   刷新率:  {_FrameRateCounter.Frequency:N0} FPS\n\n");
-                        sb.Append($"时间:  {Texting.GetLongTimeStringFromTimeSpan(TimeSpan.FromSeconds(_CurrentTime))}");
+                        sb.Append($"   -  频率:  {Texting.GetScientificNotationString(_TransformFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
+                        sb.Append($"   -  命中缓存 / 提交请求:  {Texting.GetScientificNotationString(_TransformCachedFrequencyCounter.Frequency, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TransformRequestFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
+                        sb.Append($"   直线:  {Texting.GetScientificNotationString(_DrawLineFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
+                        sb.Append($"   刷新率:  {Texting.GetScientificNotationString(_FrameRateCounter.Frequency, 4, true, true, "FPS")}\n\n");
+                        string ts = $"{timeSpan.Seconds:D2}.{timeSpan.Milliseconds:D3} 秒";
+                        if (timeSpan.TotalMinutes > 0)
+                        {
+                            ts = $"{timeSpan.Minutes:D2} 分钟 {ts}";
+                            if (timeSpan.TotalHours > 0)
+                            {
+                                ts = $"{timeSpan.Hours:D2} 小时 {ts}";
+                                if (timeSpan.TotalDays > 0)
+                                {
+                                    ts = $"{timeSpan.Days} 天 {ts}";
+                                }
+                            }
+                        }
+                        sb.Append($"时间:  {ts}");
                         graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 245));
                     }
                     else
@@ -654,9 +669,9 @@ namespace Multibody
                         StringBuilder sb = new StringBuilder();
                         sb.Append("性能:\n");
                         sb.Append($"   仿射变换:\n");
-                        sb.Append($"   -  频率:  {_TransformFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   -  命中缓存 / 提交请求:  {_TransformCachedFrequencyCounter.Frequency:N0} / {_TransformRequestFrequencyCounter.Frequency:N0} Hz\n");
-                        sb.Append($"   刷新率:  {_FrameRateCounter.Frequency:N0} FPS\n\n");
+                        sb.Append($"   -  频率:  {Texting.GetScientificNotationString(_TransformFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
+                        sb.Append($"   -  命中缓存 / 提交请求:  {Texting.GetScientificNotationString(_TransformCachedFrequencyCounter.Frequency, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TransformRequestFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
+                        sb.Append($"   刷新率:  {Texting.GetScientificNotationString(_FrameRateCounter.Frequency, 4, true, true, "FPS")}\n\n");
                         graph.DrawString(sb.ToString(), _FPSInfoFont, _FPSInfoBrush, new Point(5, _BackgroundBitmap.Height - 85));
                     }
 
