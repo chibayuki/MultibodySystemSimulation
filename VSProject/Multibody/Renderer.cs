@@ -2,7 +2,7 @@
 Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.117.1000.M2.201101-1440
+Version 1.0.228.1000.M3.240721-1100
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
@@ -642,7 +642,7 @@ namespace Multibody
                         sb.Append($"   轨迹:\n");
                         sb.Append($"   -  频率 / 目标频率:  {Texting.GetScientificNotationString(_SimulationData.KinematicsFPS, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TimeMag / _SimulationData.KinematicsResolution, 4, true, true, "Hz")}\n");
                         sb.Append($"   -  当前帧 / 最新帧:  {_LatestFrameKinematicsId} / {latestFrame?.KinematicsId ?? 0}\n");
-                        sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount} / {_SimulationData.CachedFrameCount} 帧\n");
+                        sb.Append($"   -  使用中 / 已缓存:  {_UsingFrameCount} / {_SimulationData.CachedFrameCount}\n");
                         sb.Append($"   仿射变换:\n");
                         sb.Append($"   -  频率:  {Texting.GetScientificNotationString(_TransformFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");
                         sb.Append($"   -  命中缓存 / 提交请求:  {Texting.GetScientificNotationString(_TransformCachedFrequencyCounter.Frequency, 4, true, true, "Hz")} / {Texting.GetScientificNotationString(_TransformRequestFrequencyCounter.Frequency, 4, true, true, "Hz")}\n");

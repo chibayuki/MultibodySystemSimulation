@@ -2,7 +2,7 @@
 Copyright © 2024 chibayuki@foxmail.com
 
 多体系统模拟 (MultibodySystemSimulation)
-Version 1.0.117.1000.M2.201101-1440
+Version 1.0.228.1000.M3.240721-1100
 
 This file is part of "多体系统模拟" (MultibodySystemSimulation)
 
